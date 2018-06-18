@@ -1,5 +1,6 @@
 import argparse
 import cmath
+import copy
 import datetime
 import functools
 import itertools
@@ -28,7 +29,7 @@ YÝŶŸZŹŽŻaàáâäæãå
 ΜΝΞΟΌΠΡΣΤΥΎΦΧΨΩΏ
 αάβγδεέζηήθιίΐκλ
 μνξοόπσςτυύΰφχψω
-ώ0123456789.-"¶
+ώ0123456789. ",
 ᏣᏤᏥᏦᏧᏨᏔᏖᏘᎧᎿᏀᏍᏜᏮᏭ
 ᏬᏫᏩᏪᏴᏳᏲᏱᏰᏯᎦᎨᎩᎪᎫᎬ
 ᎭᎮᎯᎰᎱᎲᎳᎴᎵᎶᎷᎸᎹᎺᎻᎼ
@@ -41,8 +42,8 @@ YÝŶŸZŹŽŻaàáâäæãå
 јклчћѕџцвбнмђж¤þ
 {@%‰#}(?¿!¡)ªº‹›
 °◊•—/\:;”“„'’‘`^
-*+=,_|~ <≤«·»≥>ᴇ
-ˋˆ¨´ˇ∞≠†∂ƒ∆¬≈µﬁﬂ
+*+=_|~-<≤«·»≥>ᴇ¶
+ˋˆ¨´ˇ∞≠†∂ƒ⋮¬≈µﬁﬂ
 ×⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾
 ÷₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎'''.replace('\n', '')
 
@@ -82,48 +83,50 @@ class AttrDict(dict):
             return False
         return ret
 
-class Block:
-    def __init__(self, code, glob):
-        self.code = Processor(code[1:], *(glob or self.glob))
-        self.glob = glob
-
-    def __str__(self):
-        return '{%s}' % ''.join(self.code.code)
-
-    def __repr__(self):
-        return '{%s}' % ''.join(self.code.code)
-
-    def call(self, stacks):
-        ret = self.code.execute(stacks)
-        return ret
-
-    __call__ = call
-
 class Clean:
     def __init__(self, code, argv, stackcount):
-        self.code = Processor(code[1:], argv, stackcount)
+        self.proc = Processor(code[1:], argv, stackcount)
 
     def call(self, *args):
         if args:
-            self.code.stacks[self.code.index].push(*args)
+            self.proc.stacks[self.proc.index].push(*args)
         
         ret = []
-        for stk in self.code.execute().copy():
+        for stk in self.proc.execute().copy():
             stkc = stk.copy()
             stk.clear()
             if stkc:
                 ret.append(stkc.pop())
-                
+
+        self.reset()
         return ret.pop()
 
+    def reset(self):
+        length = len(self.proc.stacks)
+        self.proc.stacks = []
+        for _ in range(length):
+            self.proc.stacks.append(Stack())
+
     def __str__(self):
-        return '(%s)' % ''.join(self.code.code)
+        return '(%s)' % self.proc.preserve
 
     def __repr__(self):
-        return '(%s)' % ''.join(self.code.code)
+        return '(%s)' % self.proc.preserve
 
     __call__ = call
+    
+class Block(Clean):
+    def __init__(self, code, argv, stacks):
+        self.proc = Processor(code[1:], argv, len(stacks))
+        self.proc.stacks = stacks
+        self.starts = copy.deepcopy(stacks)
+        
+    def __str__(self):
+        return '{%s}' % self.proc.preserve
 
+    def __repr__(self):
+        return '{%s}' % self.proc.preserve
+        
 class Processor:
     def __init__(self, code, args, stacks = 2, start = False):
         self.preserve = code
@@ -144,10 +147,7 @@ class Processor:
 
     __repr__ = __str__
 
-    def execute(self, rep_stacks = None):
-
-        if rep_stacks is not None:
-            print('>', rep_stacks)
+    def execute(self):
 
         scollect = ''
         string = 0
@@ -161,8 +161,25 @@ class Processor:
         ccollect = ''
         clean = 0
 
+        gen = (i for i in range(1))
+
+        '''
+        ° - String separator  ("abc°def" -> ["abc", "def"]
+        ” - Char literal
+        “ - Compressed string
+        „ - Two char literal
+        ' - Code page indexes
+        ’ - Base 510 literal
+        ‘ - Ordinal indexes
+
+        ª - Extended commands
+        º - Extended commands
+        ⋮ - Sequences
+        '''
+
         for index, char in enumerate(self.code):
-            if (len(char) > 1 or char.isdigit()) and not (string or array or block or clean):
+                
+            if (len(char) > 1 or char.isdigit()) and not (string or array or block or clean) and char[0] not in 'ªº⋮':
                 self.stacks[self.index].push(eval(char.translate(DIGITTRANS)))
                 continue
 
@@ -171,7 +188,7 @@ class Processor:
             if char == '}':
                 block -= 1
                 if block == 0:
-                    self.stacks[self.index].push(Block(bcollect, [self.args, len(self.stacks)]))
+                    self.stacks[self.index].push(Block(bcollect, self.args, self.stacks))
                     bcollect = ''
                     continue
 
@@ -220,14 +237,13 @@ class Processor:
                 continue
 
             try:
-                cmd, self.index = commands[char](self.index, self.stacks)
+                cmd, new = commands[char](self.index, self.stacks)
             except KeyError:
                 print('Unknown command: "{}". Stack trace:\n{}'.format(char, repr(self)), file = sys.stderr)
                 continue
             
             if cmd.arity >= 0:
                 args = self.stacks[self.index].pop(count = cmd.arity, unpack = False)
-                # ret = cmd.call(*args)
                 try:
                     ret = cmd.call(*args)
                 except Exception as e:
@@ -237,8 +253,16 @@ class Processor:
                 print('Error when running "{}"'.format(char), file = sys.stderr)
                 continue
 
+            self.index = new
+
             if ret is None:
                 continue
+
+            if type(ret) == type(gen):
+                ret = list(ret)
+
+            if cmd.empty:
+                self.stacks[self.index].clear()
             
             if cmd.unpack:
                 self.stacks[self.index].push(*ret)
@@ -251,14 +275,14 @@ class Processor:
             if collect:
                 self.stacks[self.index].push(collect)
 
-        return self.stacks
+        return copy.deepcopy(self.stacks)
 
     def output(self, sep = '\n'):
         strings = []
         out = list(filter(None, self.stacks))
         
         for stk in out:
-            
+            stk.reverse()
             if len(stk) > 1:
                 stk = '\n'.join(map(convert, stk))
                 
@@ -282,7 +306,7 @@ class Stack(list):
     def __repr__(self):
         final = []
         for elem in self:
-            final += convert(elem)
+            final.append(convert(elem, num = True))
         return str(final)
 
     def __getitem__(self, index):
@@ -334,10 +358,14 @@ class Stack(list):
             return popped if len(popped) > 1 else popped[0]
         return popped
 
-def convert(value):
+def convert(value, num = False):
     if not isinstance(value, (int, float, complex, list, str)):
         try: value = list(value)
         except: pass
+        
+    if num:
+        return value
+    
     return str(value)
 
 def simplify(value, unpack = False):
@@ -367,8 +395,8 @@ def simplify(value, unpack = False):
 def digit(string):
     regex = r'''(-?\z+)(((\k)|(\e-?)|(\j-?))(?(5)$|(\z+(\k\z+)?)))?$''' \
             .replace(r'\z', r'[\d₀₁₂₃₄₅₆₇₈₉]')                          \
-            .replace(r'\e', r'[Eᴇ]')                                    \
-            .replace(r'\j', r'[jј]')                                    \
+            .replace(r'\e', r'[ᴇ]')                                     \
+            .replace(r'\j', r'[ј]')                                     \
             .replace(r'\k', r'[\.•]')
             
     return (not re.search(regex, string)) ^ 1
@@ -393,16 +421,26 @@ def group(array):
     tkns = list(filter(None, tkns))
     final = ['']
     index = 0
+    skips = 1
+    
     while index < len(tkns):
+        
         while index < len(tkns) and digit(tkns[index]):
             if not digit(final[-1]):
                 final.append('')
             final[-1] += tkns[index]
             index += 1
+
         if index < len(tkns) and not digit(tkns[index]):
+            
+            if tkns[index] in 'ªº⋮' and index < len(tkns) - 1:
+                tkns[index] += tkns[index+1]
+                skips = 2
+                
             final.append(tkns[index])
-        index += 1
-        
+        index += skips
+        skips = 1
+
     return list(filter(None, final))
 
 def tokeniser(string):
@@ -410,7 +448,7 @@ def tokeniser(string):
     
     if not re.search(regex, string):
         if not re.search(regex[1:-1], string):
-            return list(string)
+            return group(list(string))
         
         index = 0
         final = []
@@ -423,7 +461,7 @@ def tokeniser(string):
             if char == '"':
                 readstring ^= 1
                 
-            if char == '0' and string[index + 1] not in '.j':
+            if char == '0' and index < len(string) - 1 and string[index + 1] not in '.j':
                 while char in '-1234567890.Ej' and not readstring:
                     temp += char
                     index += 1
@@ -512,38 +550,48 @@ def partargs(function, index_args, filler = 0):
         return function(*args)
     return inner
 
-def dynamic_arity(stacks, current, minimum = 2):
+def runattr(obj, attr):
+    def inner(args = None):
+        if args is None:
+            args = tuple()
+        getattr(obj, attr)(*args)
+    return inner
+
+def dynamic_arity(stacks, current, minimum = 2, default = 2):
     stk = stacks[current]
+    if not isinstance(stk.peek(), int) or stk.peek() < 0:
+        return default + 1
+    
     arity = stk.pop(unpack = True)
     if arity == 0:
         arity = minimum - 1
     return arity + 1
 
-def digits(function, indexes = None):
-    def inner(*args):
-        args = list(args)
-        
-        for index, arg in enumerate(args):
-            perform = indexes is None or index in indexes
-            if isinstance(arg, int) and perform:
-                arg = helpers.to_base(arg)
-            args[index] = arg
-            
-        return function(*args)
-    return inner
+def application(types):
+    def outer(function, indexes = None):
+        def inner(*args):
+            args = list(args)
 
-def ranges(function, indexes = None):
-    def inner(*args):
-        args = list(args)
+            for index, arg in enumerate(args):
+                perform = indexes is None or index in indexes
+                
+                for ty in types.keys():
+                    if isinstance(ty, type):
+                        if isinstance(arg, ty) and perform:
+                            arg = types[ty](arg)
+                            
+                    elif callable(ty):
+                        if ty(arg) and perform:
+                            arg = types[ty](arg)
 
-        for index, arg in enumerate(args):
-            perform = indexes is None or index in indexes
-            if isinstance(arg, int) and perform:
-                arg = helpers.range(arg)
-            args[index] = arg
+                    else:
+                        raise ValueError()
 
-        return function(*args)
-    return inner
+                args[index] = arg
+                
+            return function(*args)
+        return inner
+    return outer
 
 def iterate(function):
     def inner(*args):
@@ -571,8 +619,30 @@ def nilad(value):
         return value
     return inner
 
+def exec_orst(code, argv):
+    proc = Processor(code, argv)
+    ret = proc.execute()
+    return ret
+
+def tuple_application(*functions):
+    def inner(*args):
+        return [func(*args) for func in functions]
+    return inner
+
 listify = helpers.listify
 partial = functools.partial
+
+digits = application(
+    {int: helpers.to_base}
+)
+
+ranges = application(
+    {int: helpers.range}
+)
+
+listargs = application(
+    {partargs(hasattr, {2: '__iter__'}): list}
+)
 
 commands = {
 
@@ -1044,7 +1114,7 @@ commands = {
 
     'P':lambda index, stacks: (
         AttrDict(
-            call = identify(partial(print, stacks[index])),
+            call = partial(print, stacks[index]),
             arity = 0,
         ),
         index
@@ -1101,7 +1171,7 @@ commands = {
 
     'Š':lambda index, stacks: (
         AttrDict(
-            call = round,
+            call = reverse(round),
             arity = 2,
         ),
         index
@@ -1806,7 +1876,7 @@ commands = {
 
     'ś':lambda index, stacks: (
         AttrDict(
-            call = digits(list.pop),
+            call = digits(helpers.pop),
             arity = 1,
         ),
         index
@@ -1814,7 +1884,7 @@ commands = {
 
     'š':lambda index, stacks: (
         AttrDict(
-            call = digits(list.pop, (0,)),
+            call = reverse(digits(helpers.pop, (0,))),
             arity = 2,
         ),
         index
@@ -2215,7 +2285,7 @@ commands = {
 
     'Χ':lambda index, stacks: (
         AttrDict(
-            call = partial(operator.mul, 2),
+            call = partargs(operator.mod, {2: 2}),
             arity = 1,
         ),
         index
@@ -2469,24 +2539,843 @@ commands = {
         ),
         index
     ),
+
+    'φ':lambda index, stacks: (
+        AttrDict(
+            call = nilad((1 + math.sqrt(5)) / 2),
+            arity = 0,
+        ),
+        index
+    ),
+
+    'χ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.zipwith,
+            arity = 3,
+        ),
+        index
+    ),
+
+    'ψ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.table,
+            arity = 3,
+        ),
+        index
+    ),
+
+    'ω':lambda index, stacks: (
+        AttrDict(
+            call = stacks[(index + 1) % len(stacks)].push,
+            arity = 1,
+        ),
+        (index + 1) % len(stacks)
+    ),
+
+    'ώ':lambda index, stacks: (
+        AttrDict(
+            call = stacks[(index - 1) if (index - 1) < 0 else (len(stacks) + ~index)].push,
+            arity = 1,
+        ),
+        (index - 1) if (index - 1) < 0 else (len(stacks) + ~index),
+    ),
+
+    ',':lambda index, stacks: (
+        AttrDict(
+            call = helpers.pair,
+            arity = 2,
+        ),
+        index
+    ),
+
+    # Two byte commands
+
+    'Ꮳ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.while_loop,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮴ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.while_loop, accumulate = True),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮵ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.until_loop,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮶ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.until_loop, accumulate = True),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮷ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.until_repeated,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮸ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.until_repeated, accumulate = True),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮤ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.while_unique,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮦ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.while_unique, accumulate = True),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮨ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.while_same,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꭷ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.while_same, accumulate = True),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮏ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.find_predicate,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮐ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.find_predicate, retall = True),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮝ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.find_predicate, find = 'index'),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮬ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.find_predicate, retall = True, find = 'index'),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮾ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.find_predicate,
+            arity = 3,
+        ),
+        index
+    ),
+
+    'Ꮽ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.find_predicate, retall = True),
+            arity = 3,
+        ),
+        index
+    ),
+
+    'Ꮼ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.find_predicate, find = 'index'),
+            arity = 3,
+        ),
+        index
+    ),
+
+    'Ꮻ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.find_predicate, retall = True, find = 'index'),
+            arity = 3,
+        ),
+        index
+    ),
+
+    'Ꮹ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.sparse,
+            arity = 3,
+        ),
+        index
+    ),
+
+    'Ꮺ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.sparse, useindex = True),
+            arity = 3,
+        ),
+        index
+    ),
+
+    'Ᏼ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.sparse,
+            arity = 4,
+        ),
+        index
+    ),
+
+    'Ᏻ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.repeat,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ᏺ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.invariant,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ᏹ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.invariant,
+            arity = 3,
+        ),
+        index
+    ),
+
+    'Ᏸ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.neighbours,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮿ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.neighbours, dyad = True),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꭶ':lambda index, stacks: (
+        AttrDict(
+            call = nilad(stacks[index].copy()),
+            arity = 0,
+            empty = True,
+        ),
+        index
+    ),
+
+    'Ꭸ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.prefix,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꭹ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.suffix,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꭺ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.prefix_predicate,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꭻ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.suffix_predicate,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꭼ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.tie,
+            arity = dynamic_arity(stacks, index),
+        ),
+        index
+    ),
+
+    'Ꭽ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.apply_even,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꭾ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.apply_odd,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꭿ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.while_loop, do = True),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮀ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.while_loop, accumulate = True, do = True),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮁ':lambda index, stacks: (
+        AttrDict(
+            call = nest(abs, operator.sub),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮂ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.group_equal,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮃ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.zip,
+            arity = 3,
+        ),
+        index
+    ),
+
+    'Ꮄ':lambda index, stacks: (
+        AttrDict(
+            call = reverse(helpers.nrepeat),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮅ':lambda index, stacks: (
+        AttrDict(
+            call = reverse(partial(helpers.nrepeat, wrap = True)),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮆ':lambda index, stacks: (
+        AttrDict(
+            call = reverse(partial(helpers.nrepeat, inplace = True)),
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮇ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.difference,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮈ':lambda index, stacks: (
+        AttrDict(
+            call = nilad([]),
+            arity = 0,
+        ),
+        index
+    ),
+
+    'Ꮉ':lambda index, stacks: (
+        AttrDict(
+            call = nilad(''),
+            arity = 0,
+        ),
+        index
+    ),
+
+    'Ꮊ':lambda index, stacks: (
+        AttrDict(
+            call = nilad('\n'),
+            arity = 0,
+        ),
+        index
+    ),
+
+    'Ꮋ':lambda index, stacks: (
+        AttrDict(
+            call = nilad(' '),
+            arity = 0,
+        ),
+        index
+    ),
+
+    'Ꮌ':lambda index, stacks: (
+        AttrDict(
+            call = nilad(10),
+            arity = 0,
+        ),
+        index
+    ),
+
+    'Ꮍ':lambda index, stacks: (
+        AttrDict(
+            call = nilad(16),
+            arity = 0,
+        ),
+        index
+    ),
+
+    'Ꮒ':lambda index, stacks: (
+        AttrDict(
+            call = nilad(100),
+            arity = 0,
+        ),
+        index
+    ),
+
+    'Ꮎ':lambda index, stacks: (
+        AttrDict(
+            call = partial(operator.pow, 2),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮑ':lambda index, stacks: (
+        AttrDict(
+            call = partial(operator.pow, 10),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮓ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.subfactorial,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮔ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.sign,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮕ':lambda index, stacks: (
+        AttrDict(
+            call = partial(operator.truediv, 1),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮛ':lambda index, stacks: (
+        AttrDict(
+            call = partial(operator.lt, 0),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮚ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.nfind, helpers.isprime, tail = True),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮘ':lambda index, stacks: (
+        AttrDict(
+            call = partial(helpers.invariant, nest(partargs(operator.pow, {2: 2}), int, math.sqrt)),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮖ':lambda index, stacks: (
+        AttrDict(
+            call = partial(operator.gt, 0),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮗ':lambda index, stacks: (
+        AttrDict(
+            call = partargs(exec_orst, {2: stacks[index].input}),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮙ':lambda index, stacks: (
+        AttrDict(
+            call = nest(helpers.invariant, sorted),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮢ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.is_sorted,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮡ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.contiguous_sublists,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮟ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.rld,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮜ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.derangements,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮞ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.is_derangement,
+            arity = 2,
+        ),
+        index
+    ),
+
+    'Ꮠ':lambda index, stacks: (
+        AttrDict(
+            call = tuple_application(helpers.head, helpers.behead),
+            arity = 1,
+            unpack = True,
+        ),
+        index
+    ),
+
+    'Ꮫ':lambda index, stacks: (
+        AttrDict(
+            call = tuple_application(helpers.behead, helpers.head),
+            arity = 1,
+            unpack = True,
+        ),
+        index
+    ),
+
+    'Ꮪ':lambda index, stacks: (
+        AttrDict(
+            call = tuple_application(helpers.tail, helpers.shorten),
+            arity = 1,
+            unpack = True,
+        ),
+        index
+    ),
+
+    'Ꮩ':lambda index, stacks: (
+        AttrDict(
+            call = tuple_application(helpers.shorten, helpers.tail),
+            arity = 1,
+            unpack = True,
+        ),
+        index
+    ),
+
+    'Ꮧ':lambda index, stacks: (
+        AttrDict(
+            call = partial(str.split, sep = ' '),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮣ':lambda index, stacks: (
+        AttrDict(
+            call = identity,
+            arity = 1,
+            unpack = True,
+        ),
+        index
+    ),
+
+    'Ꮥ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.partitions,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮲ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.bounce,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮱ':lambda index, stacks: (
+        AttrDict(
+            call = partial(str.split, sep = '\n'),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮰ':lambda index, stacks: (
+        AttrDict(
+            call = ''.join,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮯ':lambda index, stacks: (
+        AttrDict(
+            call = ' '.join,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮮ':lambda index, stacks: (
+        AttrDict(
+            call = '\n'.join,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꮭ':lambda index, stacks: (
+        AttrDict(
+            call = nest(partial(map, partial(str.split, sep = ' ')), partial(str.split, sep = '\n')),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꭱ':lambda index, stacks: (
+        AttrDict(
+            call = nest(''.join, partial(map, str)),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꭲ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.grade_up,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꭳ':lambda index, stacks: (
+        AttrDict(
+            call = nest(helpers.grade_up, helpers.grade_up),
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꭴ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.depth,
+            arity = 1,
+        ),
+        index
+    ),
+
+    'Ꭵ':lambda index, stacks: (
+        AttrDict(
+            call = partargs(enumerate, {2: 1}),
+            arity = 1,
+        ),
+        index
+    ),
+
+    '₽':lambda index, stacks: (
+        AttrDict(
+            call = helpers.powerset,
+            arity = 1,
+        ),
+        index
+    ),
+
+    '¥':lambda index, stacks: (
+        AttrDict(
+            call = nest(helpers.range, len),
+            arity = 1,
+        ),
+        index
+    ),
+
+    '£':lambda index, stacks: (
+        AttrDict(
+            call = nest('\n'.join, ' '.join),
+            arity = 1,
+        ),
+        index
+    ),
+
+    '$':lambda index, stacks: (
+        AttrDict(
+            call = reverse(helpers.nth_elements),
+            arity = 2,
+        ),
+        index
+    ),
+
+    '¢':lambda index, stacks: (
+        AttrDict(
+            call = partargs(helpers.nth_elements, {2: 2}),
+            arity = 1,
+        ),
+        index
+    ),
+
+    '€':lambda index, stacks: (
+        AttrDict(
+            call = helpers.union,
+            arity = 2,
+        ),
+        index
+    ),
+
+    '₩':lambda index, stacks: (
+        AttrDict(
+            call = reverse(helpers.chunks_of_n),
+            arity = 2,
+        ),
+        index
+    ),
+
+    '&':lambda index, stacks: (
+        AttrDict(
+            call = helpers.intersection,
+            arity = 2,
+        ),
+        index
+    ),
+
+    '…':lambda index, stacks: (
+        AttrDict(
+            call = reverse(helpers.nchunks),
+            arity = 2,
+        ),
+        index
+    ),
+
+    '§':lambda index, stacks: (
+        AttrDict(
+            call = helpers.from_below,
+            arity = 2,
+            unpack = True,
+        ),
+        index
+    ),
+
+    'Љ':lambda index, stacks: (
+        AttrDict(
+            call = helpers.head,
+            arity = 1,
+        ),
+        index
+    ),
     
 }
-# φχψωώ
 
 test = True
 
 if __name__ == '__main__' and test:
-    code = 'ΰ'
-    argv = [5]
+    code = '1 2§'
+    argv = []
 
     proc = Processor(code, argv, start = True)
     ret = proc.execute()
     out = proc.output(sep = '\n\n')
     
     if out:
-        print(out)
-    if out == code:
-        print('', 'QUINE', sep = '\n')
+        print(out, end = '')
+        
+    if code:
+        if out == code:
+            print('', 'QUINE', sep = '\n')
+        print('\n\nLength:', sum((code_page.index(i) // 256) + 1 for i in code), 'bytes')
 
 if __name__ == '__main__' and not test:
     
@@ -2499,6 +3388,7 @@ if __name__ == '__main__' and not test:
     getcode.add_argument('-c', '--cmd', '--cmdline', help = 'Specifies that code be read from the command line', action = a)
 
     parser.add_argument('-u', '--unicode', help = 'Use Unicode encoding', action = a)
+    parser.add_argument('-a', '--answer', help = 'Outputs formatted answer', action = a)
 
     parser.add_argument('program')
     parser.add_argument('argv', nargs = '*', type = eval)
@@ -2525,6 +3415,6 @@ if __name__ == '__main__' and not test:
     else:
         stks = len(settings.argv)
         
-    processor = Processor(code, settings.argv, stks)
+    processor = Processor(repr(code), settings.argv, stks)
 
         
