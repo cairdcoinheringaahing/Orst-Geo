@@ -78,5 +78,3 @@ def compress_fast(tkns):
             change(512, orst.code_page.find(tkn), 4, 3)
 
     return '"{}“'.format(''.join(orst.code_page[i] for i in helpers.to_base(total, 510)))
-
-print(compress_fast(['Hello', ',', ' ', 'World', '!']))
