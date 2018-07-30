@@ -10,6 +10,7 @@ import random
 import re
 import sys
 
+import compressor
 import helpers
 
 code_page = '''
@@ -45,6 +46,10 @@ YÝŶŸZŹŽŻaàáâäæãå
 ˋˆ¨´ˇ∞≠†∂ƒ⋮¬≈µﬁﬂ
 ×⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾
 ÷₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎'''.replace('\n', '')
+
+codepage = code_page
+for char in '''”“„'’‘`°"''':
+    codepage = codepage.replace(char, '')
 
 DIGITTRANS = str.maketrans('₁₂₃₄₅₆₇₈₉₀ᴇ', '1234567890e')
 identity = lambda a: a
@@ -179,7 +184,7 @@ class Processor:
         
         ... indicates any value
 
-        ° - Single index        (°a         -> 88)
+        ° - Single index        (°a        -> 88)
         “ - Wrapped index       (“a        -> [88])
         ' - Single ordinal      ('a        -> 97)
         ’ - Wrapped char        (’a        -> ['a'])
@@ -189,7 +194,7 @@ class Processor:
         ` - Wrapped ordinal     (`a        -> [97])
         
 
-        ° - String separator    ("abc°def"  -> ["abc", "def"]
+        ° - String separator    ("abc°def" -> ["abc", "def"]
         “ - Compressed string   ("abc“     -> "...")
         ' - Code page indexes   ("abc'     -> [88, 98, 99])
         ’ - Base 510 literal    ("abc’     -> ...)
@@ -456,6 +461,9 @@ def simplify(value, unpack = False):
         value = list(value)
         
     if isinstance(value, list):
+        if all(isinstance(i, str) for i in value):
+            return ''.join(value)
+        
         if len(value) == 1 and unpack:
             return simplify(value[0])
         return list(map(simplify, value))
@@ -720,6 +728,13 @@ def tuple_application(*functions):
         return [func(*args) for func in functions]
     return inner
 
+def inverse(function):
+    def inner(value):
+        for i in range(value):
+            if function(i) >= value:
+                return i
+    return inner
+
 listify = helpers.listify
 partial = functools.partial
 
@@ -772,9 +787,9 @@ for c in '0123456789₀₁₂₃₄₅₆₇₈₉':
 
 string_formats = {
 
-    '“': lambda s: helpers.decompress(list(map(code_page.find, s)), code_page),
+    '“': lambda s: helpers.decompress(list(map(codepage.find, s)), code_page),
     "'": lambda s: list(map(code_page.find, s)),
-    '’': lambda s: helpers.from_base(list(map(code_page.find, s)), 510),
+    '’': lambda s: helpers.from_base(list(map(code_page.find, s)), 503),
     '‘': lambda s: list(map(ord, s)),
     '„': lambda s: [s],
     '”': lambda s: list(s),
@@ -850,7 +865,7 @@ commands = {
     # 1 byte tokens
 
     'A':lambda index, stacks: AttrDict(
-        doc = 'Absolute value (num → real)',
+        doc = 'Absolute value (real → real)',
         call = abs,
         arity = 1,
         new = index,
@@ -1914,264 +1929,306 @@ commands = {
     's':lambda index, stacks: AttrDict(
         doc = 'Find the first index of an element in the array (array → any → int)',
         call = digits(list.index, (0,)),
-        arity = 3,
+        arity = 2,
         new = index,
     ),
 
     'ß':lambda index, stacks: AttrDict(
-        doc = '',
+        doc = 'Find the first index of an element in a sublist (array → any → int → int → int)',
         call = digits(list.index, (0,)),
         arity = 4,
         new = index,
     ),
 
     'ś':lambda index, stacks: AttrDict(
+        doc = 'Remove the last element of an array (array → array)',
         call = digits(helpers.pop),
         arity = 1,
         new = index,
     ),
 
     'š':lambda index, stacks: AttrDict(
+        doc = 'Remove the element at the specified index (array → int → array)',
         call = reverse(digits(helpers.pop, (0,))),
         arity = 2,
         new = index,
     ),
 
     't':lambda index, stacks: AttrDict(
+        doc = 'Insert an element at the index (array → int → any → array)',
         call = digits(list.insert, (0,)),
         arity = 3,
         new = index,
     ),
 
     'ť':lambda index, stacks: AttrDict(
+        doc = 'Capitalise the first letter of a string (str → str)',
         call = str.capitalize,
         arity = 1,
         new = index,
     ),
 
     'ŧ':lambda index, stacks: AttrDict(
+        doc = 'Surround a string with spaces (str → int → str)',
         call = str.center,
         arity = 2,
         new = index,
     ),
 
     'u':lambda index, stacks: AttrDict(
+        doc = 'Surround a string with a given character (str → int → str → str)',
         call = str.center,
         arity = 3,
         new = index,
     ),
 
     'ù':lambda index, stacks: AttrDict(
+        doc = 'Count occurences of a substring (str → str → int)',
         call = str.count,
         arity = 2,
         new = index,
     ),
 
     'ú':lambda index, stacks: AttrDict(
+        doc = 'Count occurences of a substring in a suffix (str → str → int → int)',
         call = str.count,
         arity = 3,
         new = index,
     ),
 
     'û':lambda index, stacks: AttrDict(
+        doc = 'Count occurences of a substring in a substring (str → str → int → int → int)',
         call = str.count,
         arity = 4,
         new = index,
     ),
 
     'ü':lambda index, stacks: AttrDict(
+        doc = 'Does the string end with the substring? (str → str → bool)',
         call = str.endswith,
         arity = 2,
         new = index,
     ),
 
     'ů':lambda index, stacks: AttrDict(
+        doc = 'Does a suffix end with the substring? (str → str → int → bool)',
         call = str.endswith,
         arity = 3,
         new = index,
     ),
 
     'ū':lambda index, stacks: AttrDict(
+        doc = 'Does a substring end with the substring? (str → str → int → int → bool)',
         call = str.endswith,
         arity = 4,
         new = index,
     ),
 
     'v':lambda index, stacks: AttrDict(
+        doc = 'Return the index of the substring (str → str → int)',
         call = str.find,
         arity = 2,
         new = index,
     ),
 
     'w':lambda index, stacks: AttrDict(
+        doc = 'Return the index of the substring in a suffix (str → str → int → int)',
         call = str.find,
         arity = 3,
         new = index,
     ),
 
     'ŵ':lambda index, stacks: AttrDict(
+        doc = 'Return the index of the substring in a substring (str → str → int → int → int)',
         call = str.find,
         arity = 4,
         new = index,
     ),
 
     'x':lambda index, stacks: AttrDict(
+        doc = 'Is the string alphanumeric? (str → bool)',
         call = str.isalnum,
         arity = 1,
         new = index,
     ),
 
     'y':lambda index, stacks: AttrDict(
+        doc = 'Is the string alphabetical? (str → bool)',
         call = str.isalpha,
         arity = 1,
         new = index,
     ),
 
     'ý':lambda index, stacks: AttrDict(
+        doc = 'Is the string numerical? (str → bool)',
         call = str.isdigit,
         arity = 1,
         new = index,
     ),
 
     'ŷ':lambda index, stacks: AttrDict(
+        doc = 'Is the string lowercase? (str → bool)',
         call = str.islower,
         arity = 1,
         new = index,
     ),
 
     'ÿ':lambda index, stacks: AttrDict(
+        doc = 'Is the string uppercase? (str → bool)',
         call = str.isupper,
         arity = 1,
         new = index,
     ),
 
     'z':lambda index, stacks: AttrDict(
-        call = str.join,
+        doc = 'Join an array on a string (str → array → str)',
+        call = helpers.join,
         arity = 2,
         new = index,
     ),
 
     'ź':lambda index, stacks: AttrDict(
+        doc = 'Justify-left with spaces (str → int → str)',
         call = str.ljust,
         arity = 2,
         new = index,
     ),
 
     'ž':lambda index, stacks: AttrDict(
+        doc = 'Justify-left (str → int → str → str)',
         call = str.ljust,
         arity = 3,
         new = index,
     ),
 
     'ż':lambda index, stacks: AttrDict(
+        doc = 'Lowercase (str → str)',
         call = str.lower,
         arity = 1,
         new = index,
     ),
 
     'Α':lambda index, stacks: AttrDict(
+        doc = 'Remove leading whitespace (str → str)',
         call = str.lstrip,
         arity = 1,
         new = index,
     ),
 
     'Ά':lambda index, stacks: AttrDict(
+        doc = 'Remove leading characters (str → str → str)',
         call = str.lstrip,
         arity = 2,
         new = index,
     ),
 
     'Β':lambda index, stacks: AttrDict(
+        doc = 'String replacement (str → str → str → str)',
         call = str.replace,
         arity = 3,
         new = index,
     ),
 
     'Γ':lambda index, stacks: AttrDict(
+        doc = 'Counted string replacement (str → str → str → int → str)',
         call = str.replace,
         arity = 4,
         new = index,
     ),
 
     'Δ':lambda index, stacks: AttrDict(
+        doc = 'Justify-right with spaces (str → int → str)',
         call = str.rjust,
         arity = 2,
         new = index,
     ),
 
     'Ε':lambda index, stacks: AttrDict(
+        doc = 'Justify-right (str → int → str → str)',
         call = str.rjust,
         arity = 3,
         new = index,
     ),
 
     'Έ':lambda index, stacks: AttrDict(
+        doc = 'Remove trailing whitespace (str → str)',
         call = str.rstrip,
         arity = 1,
         new = index,
     ),
 
     'Ζ':lambda index, stacks: AttrDict(
+        doc = 'Remove trailing characters (str → str → str)',
         call = str.rstrip,
         arity = 2,
         new = index,
     ),
 
     'Η':lambda index, stacks: AttrDict(
+        doc = 'Split on whitespace (str → array)',
         call = str.split,
         arity = 1,
         new = index,
     ),
 
     'Ή':lambda index, stacks: AttrDict(
+        doc = 'Split on a substring (str → str → array)',
         call = str.split,
         arity = 2,
         new = index,
     ),
 
     'Θ':lambda index, stacks: AttrDict(
+        doc = 'Does the string start with a substring? (str → str → bool)',
         call = str.startswith,
         arity = 2,
         new = index,
     ),
 
     'Ι':lambda index, stacks: AttrDict(
+        doc = 'Does a suffix start with a substring? (str → str → int → bool)',
         call = str.startswith,
         arity = 3,
         new = index,
     ),
 
     'Ί':lambda index, stacks: AttrDict(
+        doc = 'Does a substring start with the substring? (str → str → int → int → bool)',
         call = str.startswith,
         arity = 4,
         new = index,
     ),
 
     'Κ':lambda index, stacks: AttrDict(
+        doc = 'Remove leading and trailing whitespace (str → str)',
         call = str.strip,
         arity = 1,
         new = index,
     ),
 
     'Λ':lambda index, stacks: AttrDict(
+        doc = 'Remove leading and trailing characters (str → str → str)',
         call = str.strip,
         arity = 2,
         new = index,
     ),
 
     'Μ':lambda index, stacks: AttrDict(
+        doc = 'Uppercase (str → str)',
         call = str.upper,
         arity = 1,
         new = index,
     ),
 
     'Ν':lambda index, stacks: AttrDict(
+        doc = 'Convert to digits (int → array)',
         call = helpers.to_base,
         arity = 1,
         new = index,
     ),
 
     'Ξ':lambda index, stacks: AttrDict(
+        doc = 'Duplicate (any → any)',
         call = helpers.duplicate,
         arity = 1,
         unpack = True,
@@ -2179,138 +2236,161 @@ commands = {
     ),
 
     'Ο':lambda index, stacks: AttrDict(
+        doc = 'Increment (num → num)',
         call = helpers.increment,
         arity = 1,
         new = index,
     ),
 
     'Ό':lambda index, stacks: AttrDict(
+        doc = 'Decrement (num → num)',
         call = helpers.decrement,
         arity = 1,
         new = index,
     ),
 
     'Π':lambda index, stacks: AttrDict(
+        doc = 'Euler\'s totient function (int → int)',
         call = helpers.totient,
         arity = 1,
         new = index,
     ),
 
     'Ρ':lambda index, stacks: AttrDict(
+        doc = 'Convert from binary (array → int)',
         call = partial(digits(helpers.from_base), base = 2),
         arity = 1,
         new = index,
     ),
 
     'Σ':lambda index, stacks: AttrDict(
+        doc = 'Complement (num → num)',
         call = partial(operator.sub, 1),
         arity = 1,
         new = index,
     ),
 
     'Τ':lambda index, stacks: AttrDict(
+        doc = 'Convert from digits (array → int)',
         call = digits(helpers.from_base),
         arity = 1,
         new = index,
     ),
 
     'Υ':lambda index, stacks: AttrDict(
+        doc = 'Convert from base (array → int → int)',
         call = digits(helpers.from_base, (0,)),
         arity = 2,
         new = index,
     ),
 
     'Ύ':lambda index, stacks: AttrDict(
+        doc = 'Are all elements equal? (array → bool)',
         call = digits(helpers.all_equal),
         arity = 1,
         new = index,
     ),
 
     'Φ':lambda index, stacks: AttrDict(
+        doc = 'Flatten ([array] → array)',
         call = helpers.flatten,
         arity = 1,
         new = index,
     ),
 
     'Χ':lambda index, stacks: AttrDict(
+        doc = 'Parity (real → int)',
         call = partargs(operator.mod, {2: 2}),
         arity = 1,
         new = index,
     ),
 
     'Ψ':lambda index, stacks: AttrDict(
+        doc = 'Forward differences (array → array)',
         call = digits(helpers.increments),
         arity = 1,
         new = index,
     ),
 
     'Ω':lambda index, stacks: AttrDict(
+        doc = 'Prime test (int → bool)',
         call = helpers.isprime,
         arity = 1,
         new = index,
     ),
 
     'Ώ':lambda index, stacks: AttrDict(
+        doc = 'Prime factor decomposition (int → array)',
         call = helpers.prime_product,
         arity = 1,
         new = index,
     ),
 
     'α':lambda index, stacks: AttrDict(
+        doc = 'Factors (int → array)',
         call = helpers.factors,
         arity = 1,
         new = index,
     ),
 
     'ά':lambda index, stacks: AttrDict(
+        doc = 'Proper factors (int → array)',
         call = partial(helpers.factors, proper = True),
         arity = 1,
         new = index,
     ),
 
     'β':lambda index, stacks: AttrDict(
+        doc = 'Unique prime factors (int → array)',
         call = partial(helpers.factors, prime = True),
         arity = 1,
         new = index,
     ),
 
     'γ':lambda index, stacks: AttrDict(
-        call = partargs(helpers.factors, {2: True, 3: True}),
+        doc = 'Unique proper prime factors (int → array)',
+        call = partial(helpers.factors, prime = True, proper = True),
         arity = 1,
         new = index,
     ),
 
     'δ':lambda index, stacks: AttrDict(
+        doc = 'Product (array → num)',
         call = digits(helpers.product),
         arity = 1,
         new = index,
     ),
 
     'ε':lambda index, stacks: AttrDict(
+        doc = 'Ternary if statement (bool → func → func → any)',
         call = helpers.if_statement,
         arity = 3,
         new = index,
     ),
 
     'έ':lambda index, stacks: AttrDict(
+        doc = 'Conditional execution (bool → func → any)',
         call = helpers.if_statement,
         arity = 2,
         new = index,
     ),
 
     'ζ':lambda index, stacks: AttrDict(
+        doc = 'Negated conditional execution (bool → func → any)',
         call = helpers.ifnot_statement,
         arity = 2,
         new = index,
     ),
 
     'η':lambda index, stacks: AttrDict(
+        doc = 'Push the input array',
         call = nilad(stacks[index].input),
         arity = 0,
         new = index,
     ),
 
     'ή':lambda index, stacks: AttrDict(
+        doc = 'Push the individual inputs',
         call = nilad(stacks[index].input),
         arity = 0,
         unpack = True,
@@ -2318,144 +2398,168 @@ commands = {
     ),
 
     'θ':lambda index, stacks: AttrDict(
+        doc = 'Find the first integers which satisfy the given predicate (pred → int → array)',
         call = helpers.nfind,
         arity = 2,
         new = index,
     ),
 
     'ι':lambda index, stacks: AttrDict(
+        doc = 'First the nth integer which satisfies the given predicate (pred → int → int)',
         call = partial(helpers.nfind, tail = True),
         arity = 2,
         new = index,
     ),
 
     'ί':lambda index, stacks: AttrDict(
-        call = partial(helpers.nfind, head = True),
-        arity = 2,
+        doc = 'Find the first integer which satisfies the given predicate (pred → int → int)',
+        call = partargs(helpers.nfind, {2: 1, 4: True}),
+        arity = 1,
         new = index,
     ),
 
     'ΐ':lambda index, stacks: AttrDict(
+        doc = 'Push the value of $x',
         call = nilad(variables['x']),
         arity = 0,
         new = index,
     ),
 
     'κ':lambda index, stacks: AttrDict(
+        doc = 'Set the value of $x',
         call = partargs(helpers.assign, {1: variables, 2: 'x'}),
         arity = 1,
         new = index,
     ),
 
     'λ':lambda index, stacks: AttrDict(
+        doc = 'Factor sum (int → int)',
         call = nest(sum, helpers.factors),
         arity = 1,
         new = index,
     ),
 
     'μ':lambda index, stacks: AttrDict(
+        doc = 'Retrieve the value of a variable (str → any)',
         call = variables.get,
         arity = 1,
         new = index,
     ),
 
     'ν':lambda index, stacks: AttrDict(
+        doc = 'Assign a variable to a value (str → any → any)',
         call = partargs(helpers.assign, {1: variables}),
         arity = 2,
         new = index,
     ),
 
     'ξ':lambda index, stacks: AttrDict(
-        call = partargs(operator.mod, {2: 2}),
+        doc = 'Flipped parity (real → int)',
+        call = nest(partial(operator.sub, 1), partargs(operator.mod, {2: 2})),
         arity = 1,
         new = index,
     ),
 
     'ο':lambda index, stacks: AttrDict(
+        doc = 'Wrap (any → [any])',
         call = helpers.wrap,
         arity = 1,
         new = index,
     ),
 
     'ό':lambda index, stacks: AttrDict(
+        doc = 'Product (array → int)',
         call = ranges(helpers.product),
         arity = 1,
         new = index,
     ),
 
     'π':lambda index, stacks: AttrDict(
+        doc = '10 to the power, modulo (real → real → real)',
         call = partial(pow, 10),
-        arity = 1,
+        arity = 2,
         new = index,
     ),
 
     'σ':lambda index, stacks: AttrDict(
+        doc = '2 to the power, modulo (real → real → real)',
         call = partial(pow, 2),
-        arity = 1,
+        arity = 2,
         new = index,
     ),
 
     'ς':lambda index, stacks: AttrDict(
+        doc = 'Prime factors and exponents (int → [array])',
         call = nest(helpers.rle, helpers.prime_product),
         arity = 1,
         new = index,
     ),
 
     'τ':lambda index, stacks: AttrDict(
+        doc = 'Run-length encode (array → [array])',
         call = digits(helpers.rle),
         arity = 1,
         new = index,
     ),
 
     'υ':lambda index, stacks: AttrDict(
+        doc = 'Prime exponents (int → array)',
         call = nest(partial(map, helpers.tail), helpers.rle, helpers.prime_product),
         arity = 1,
         new = index,
     ),
 
     'ύ':lambda index, stacks: AttrDict(
+        doc = 'Double (num → num)',
         call = partial(operator.mul, 2),
         arity = 1,
         new = index,
     ),
 
     'ΰ':lambda index, stacks: AttrDict(
+        doc = 'Specified number of prime numbers (int → array)',
         call = partial(helpers.nfind, helpers.isprime),
         arity = 1,
         new = index,
     ),
 
     'φ':lambda index, stacks: AttrDict(
+        doc = 'Yield φ',
         call = nilad((1 + math.sqrt(5)) / 2),
         arity = 0,
         new = index,
     ),
 
     'χ':lambda index, stacks: AttrDict(
+        doc = 'Zip with function (array → array → func → array)',
         call = helpers.zipwith,
         arity = 3,
         new = index,
     ),
 
     'ψ':lambda index, stacks: AttrDict(
+        doc = 'Outer product (array → array → func → array)',
         call = helpers.table,
         arity = 3,
         new = index,
     ),
 
     'ω':lambda index, stacks: AttrDict(
+        doc = 'Move to next stack (any → any)',
         call = stacks[(index + 1) % len(stacks)].push,
         arity = 1,
         new = (index + 1) % len(stacks),
     ),
 
     'ώ':lambda index, stacks: AttrDict(
+        doc = 'Move to previous stack (any → any)',
         call = stacks[(index - 1) if (index - 1) < 0 else (len(stacks) + ~index)].push,
         arity = 1,
         new = (index - 1) if (index - 1) < 0 else (len(stacks) + ~index),
     ),
 
     ',':lambda index, stacks: AttrDict(
+        doc = 'Pair (any → any → [any, any])',
         call = helpers.pair,
         arity = 2,
         new = index,
@@ -2464,162 +2568,189 @@ commands = {
     # Two byte commands
 
     'Ꮳ':lambda index, stacks: AttrDict(
+        doc = 'While loop (pred → func → any)',
         call = helpers.while_loop,
         arity = 2,
         new = index,
     ),
 
     'Ꮴ':lambda index, stacks: AttrDict(
+        doc = 'Collected while loop (pred → func → array)',
         call = partial(helpers.while_loop, accumulate = True),
         arity = 2,
         new = index,
     ),
 
     'Ꮵ':lambda index, stacks: AttrDict(
+        doc = 'Until loop (pred → func → any)',
         call = helpers.until_loop,
         arity = 2,
         new = index,
     ),
 
     'Ꮶ':lambda index, stacks: AttrDict(
+        doc = 'Collected until loop (pred → func → array)',
         call = partial(helpers.until_loop, accumulate = True),
         arity = 2,
         new = index,
     ),
 
     'Ꮷ':lambda index, stacks: AttrDict(
+        doc = 'Loop until two adjacent iterations are equal (pred → any → any)',
         call = helpers.until_repeated,
         arity = 2,
         new = index,
     ),
 
     'Ꮸ':lambda index, stacks: AttrDict(
+        doc = 'Loop until two adjacent iterations are equal, collecting the results (pred → any → array)',
         call = partial(helpers.until_repeated, accumulate = True),
         arity = 2,
         new = index,
     ),
 
     'Ꮤ':lambda index, stacks: AttrDict(
+        doc = 'Loop while the results are unique (pred → any → any)',
         call = helpers.while_unique,
         arity = 2,
         new = index,
     ),
 
     'Ꮦ':lambda index, stacks: AttrDict(
+        doc = 'Loop while the results are unique, collecting the results (pred → any → array)',
         call = partial(helpers.while_unique, accumulate = True),
         arity = 2,
         new = index,
     ),
 
     'Ꮨ':lambda index, stacks: AttrDict(
+        doc = 'Loop with the results are identical (pred → any → any)',
         call = helpers.while_same,
         arity = 2,
         new = index,
     ),
 
     'Ꭷ':lambda index, stacks: AttrDict(
+        doc = 'Loop while the results are identical, collecting the results (pred → any → array)',
         call = partial(helpers.while_same, accumulate = True),
         arity = 2,
         new = index,
     ),
 
     'Ꮏ':lambda index, stacks: AttrDict(
+        doc = 'Find the first element which is truthy under a predicate (pred → array → any)',
         call = helpers.find_predicate,
         arity = 2,
         new = index,
     ),
 
     'Ꮐ':lambda index, stacks: AttrDict(
+        doc = 'Find all elements which are truthy under a predicate (pred → array → array)',
         call = partial(helpers.find_predicate, retall = True),
         arity = 2,
         new = index,
     ),
 
     'Ꮝ':lambda index, stacks: AttrDict(
+        doc = 'Find the first index where the corrosponding element is truthy under a predicate (pred → array → int)',
         call = partial(helpers.find_predicate, find = 'index'),
         arity = 2,
         new = index,
     ),
 
     'Ꮬ':lambda index, stacks: AttrDict(
+        doc = 'Find all indexes where the corrosponding element is truhy under a predicate (pred → array → array)',
         call = partial(helpers.find_predicate, retall = True, find = 'index'),
         arity = 2,
         new = index,
     ),
 
     'Ꮾ':lambda index, stacks: AttrDict(
+        doc = 'Find the first element which is truthy under a dyadic predicate (pred → array → any → any)',
         call = helpers.find_predicate,
         arity = 3,
         new = index,
     ),
 
     'Ꮽ':lambda index, stacks: AttrDict(
+        doc = 'Find all elements which are truthy under a dyadic predicate (pred → array → any → array)',
         call = partial(helpers.find_predicate, retall = True),
         arity = 3,
         new = index,
     ),
 
     'Ꮼ':lambda index, stacks: AttrDict(
+        doc = 'Find the first index where the corrosponding element is truthy under a dyadic predicate (pred → array → any → int)',
         call = partial(helpers.find_predicate, find = 'index'),
         arity = 3,
         new = index,
     ),
 
     'Ꮻ':lambda index, stacks: AttrDict(
+        doc = 'Find all indexes where the corrosponding element is truthy under a dyadic predicate (pred → array → any → array)',
         call = partial(helpers.find_predicate, retall = True, find = 'index'),
         arity = 3,
         new = index,
     ),
 
     'Ꮹ':lambda index, stacks: AttrDict(
+        doc = 'Sparse application (func → [int] → array → array)',
         call = helpers.sparse,
         arity = 3,
         new = index,
     ),
 
     'Ꮺ':lambda index, stacks: AttrDict(
+        doc = 'Dyadic sparse application, using the indexes (func → [int] → array → array)',
         call = partial(helpers.sparse, useindex = True),
         arity = 3,
         new = index,
     ),
 
     'Ᏼ':lambda index, stacks: AttrDict(
+        doc = 'Dyadic sparse application (func → [int] → array → any → array)',
         call = helpers.sparse,
         arity = 4,
         new = index,
     ),
 
     'Ᏻ':lambda index, stacks: AttrDict(
+        doc = 'Execute a function a specfied number of times (func → int → ...any → any)',
         call = helpers.repeat,
         arity = len(stacks[index]),
         new = index,
     ),
 
     'Ᏺ':lambda index, stacks: AttrDict(
+        doc = 'Is a value identical under a function? (func → any → bool)',
         call = helpers.invariant,
         arity = 2,
         new = index,
     ),
 
     'Ᏹ':lambda index, stacks: AttrDict(
+        doc = 'Is a value identical under a dyadic function (func → any → any → bool)',
         call = helpers.invariant,
         arity = 3,
         new = index,
     ),
 
     'Ᏸ':lambda index, stacks: AttrDict(
+        doc = 'Iterate a function over overlapping pairs of an array (func → array → array)',
         call = helpers.neighbours,
         arity = 2,
         new = index,
     ),
 
     'Ꮿ':lambda index, stacks: AttrDict(
+        doc = 'Iterate a dyadic function over overlapping pairs of an array (func → array → array)',
         call = partial(helpers.neighbours, dyad = True),
         arity = 2,
         new = index,
     ),
 
     'Ꭶ':lambda index, stacks: AttrDict(
+        doc = 'Push the entire stack',
         call = nilad(stacks[index]),
         arity = 0,
         empty = True,
@@ -2627,240 +2758,280 @@ commands = {
     ),
 
     'Ꭸ':lambda index, stacks: AttrDict(
+        doc = 'Yield all prefixes of an array (array → [array])',
         call = helpers.prefix,
         arity = 1,
         new = index,
     ),
 
     'Ꭹ':lambda index, stacks: AttrDict(
+        doc = 'Yield all suffixes of an array (array → [array])',
         call = helpers.suffix,
         arity = 1,
         new = index,
     ),
 
     'Ꭺ':lambda index, stacks: AttrDict(
+        doc = 'Iterate a function over each prefix of an array (func → array → array)',
         call = helpers.prefix_predicate,
         arity = 2,
         new = index,
     ),
 
     'Ꭻ':lambda index, stacks: AttrDict(
+        doc = 'Iterate a function over each suffix of an array (func → array → array)',
         call = helpers.suffix_predicate,
         arity = 2,
         new = index,
     ),
 
     'Ꭼ':lambda index, stacks: AttrDict(
+        doc = 'Cycle through an array and a series of functions, creating a new array from the results (array → ..func → array)',
         call = helpers.tie,
         arity = dynamic_arity(stacks, index),
         new = index,
     ),
 
     'Ꭽ':lambda index, stacks: AttrDict(
+        doc = 'Apply a function to elements at even indexes (func → array → array)',
         call = helpers.apply_even,
         arity = 2,
         new = index,
     ),
 
     'Ꭾ':lambda index, stacks: AttrDict(
+        doc = 'Apply a function to elements at odd indexes (func → array → array)',
         call = helpers.apply_odd,
         arity = 2,
         new = index,
     ),
 
     'Ꭿ':lambda index, stacks: AttrDict(
+        doc = 'Do-while loop (pred → func → any)',
         call = partial(helpers.while_loop, do = True),
         arity = 2,
         new = index,
     ),
 
     'Ꮀ':lambda index, stacks: AttrDict(
+        doc = 'Do-while loop, collecting the results (pred → func → array)',
         call = partial(helpers.while_loop, accumulate = True, do = True),
         arity = 2,
         new = index,
     ),
 
     'Ꮁ':lambda index, stacks: AttrDict(
+        doc = 'Absolute difference (num → num → num)',
         call = nest(abs, operator.sub),
         arity = 2,
         new = index,
     ),
 
     'Ꮂ':lambda index, stacks: AttrDict(
+        doc = 'Group equal elements in an array (array → [array])',
         call = helpers.group_equal,
         arity = 1,
         new = index,
     ),
 
     'Ꮃ':lambda index, stacks: AttrDict(
+        doc = 'Zip with a filler for the shorter array (array → array → any → [array])',
         call = helpers.zip,
         arity = 3,
         new = index,
     ),
 
     'Ꮄ':lambda index, stacks: AttrDict(
+        doc = 'Repeat an array (array → int → array)',
         call = reverse(helpers.nrepeat),
         arity = 2,
         new = index,
     ),
 
     'Ꮅ':lambda index, stacks: AttrDict(
+        doc = 'Repeat a nested array (array → int → [array])',
         call = reverse(partial(helpers.nrepeat, wrap = True)),
         arity = 2,
         new = index,
     ),
 
     'Ꮆ':lambda index, stacks: AttrDict(
+        doc = 'Repeat each element in place (array → int → array)',
         call = reverse(partial(helpers.nrepeat, inplace = True)),
         arity = 2,
         new = index,
     ),
 
     'Ꮇ':lambda index, stacks: AttrDict(
+        doc = 'Set difference (array → array → array)',
         call = helpers.difference,
         arity = 2,
         new = index,
     ),
 
     'Ꮈ':lambda index, stacks: AttrDict(
+        doc = 'Yield []',
         call = nilad([]),
         arity = 0,
         new = index,
     ),
 
     'Ꮉ':lambda index, stacks: AttrDict(
+        doc = 'Yield the empty string',
         call = nilad(''),
         arity = 0,
         new = index,
     ),
 
     'Ꮊ':lambda index, stacks: AttrDict(
+        doc = 'Yield a newline',
         call = nilad('\n'),
         arity = 0,
         new = index,
     ),
 
     'Ꮋ':lambda index, stacks: AttrDict(
+        doc = 'Yield a space',
         call = nilad(' '),
         arity = 0,
         new = index,
     ),
 
     'Ꮌ':lambda index, stacks: AttrDict(
+        doc = 'Yield 10',
         call = nilad(10),
         arity = 0,
         new = index,
     ),
 
     'Ꮍ':lambda index, stacks: AttrDict(
+        doc = 'Yield 16',
         call = nilad(16),
         arity = 0,
         new = index,
     ),
 
     'Ꮒ':lambda index, stacks: AttrDict(
+        doc = 'Yield 100',
         call = nilad(100),
         arity = 0,
         new = index,
     ),
 
     'Ꮎ':lambda index, stacks: AttrDict(
+        doc = 'Raise 2 to the power (num → num)',
         call = partial(operator.pow, 2),
         arity = 1,
         new = index,
     ),
 
     'Ꮑ':lambda index, stacks: AttrDict(
+        doc = 'Raise 10 to the power (num → num)',
         call = partial(operator.pow, 10),
         arity = 1,
         new = index,
     ),
 
     'Ꮓ':lambda index, stacks: AttrDict(
+        doc = 'Subfactorial (int → int)',
         call = helpers.subfactorial,
         arity = 1,
         new = index,
     ),
 
     'Ꮔ':lambda index, stacks: AttrDict(
+        doc = 'Numerical sign (real → int)',
         call = helpers.sign,
         arity = 1,
         new = index,
     ),
 
     'Ꮕ':lambda index, stacks: AttrDict(
+        doc = 'Reciprocal (num → num)',
         call = partial(operator.truediv, 1),
         arity = 1,
         new = index,
     ),
 
     'Ꮛ':lambda index, stacks: AttrDict(
+        doc = 'Is positive? (real → bool)',
         call = partial(operator.lt, 0),
         arity = 1,
         new = index,
     ),
 
     'Ꮚ':lambda index, stacks: AttrDict(
+        doc = 'Yield the prime at the specified index (int → int)',
         call = partial(helpers.nfind, helpers.isprime, tail = True),
         arity = 1,
         new = index,
     ),
 
     'Ꮘ':lambda index, stacks: AttrDict(
+        doc = 'Is a perfect square? (int → bool)',
         call = partial(helpers.invariant, nest(partargs(operator.pow, {2: 2}), int, math.sqrt)),
         arity = 1,
         new = index,
     ),
 
     'Ꮖ':lambda index, stacks: AttrDict(
+        doc = 'Is negative? (real → bool)',
         call = partial(operator.gt, 0),
         arity = 1,
         new = index,
     ),
 
     'Ꮗ':lambda index, stacks: AttrDict(
+        doc = 'Run as Orst code (str → array)',
         call = partargs(exec_orst, {2: stacks[index].input}),
         arity = 1,
         new = index,
     ),
 
     'Ꮙ':lambda index, stacks: AttrDict(
+        doc = 'Is sorted ascendingly? (array → bool)',
         call = nest(helpers.invariant, sorted),
         arity = 1,
         new = index,
     ),
 
     'Ꮢ':lambda index, stacks: AttrDict(
+        doc = 'Is sorted ascendingly or decendingly? (array → bool)',
         call = helpers.is_sorted,
         arity = 1,
         new = index,
     ),
 
     'Ꮡ':lambda index, stacks: AttrDict(
+        doc = 'Yield all contiguous sublists (array → array)',
         call = helpers.contiguous_sublists,
         arity = 1,
         new = index,
     ),
 
     'Ꮟ':lambda index, stacks: AttrDict(
+        doc = 'Run-length decode ([array] → array)',
         call = helpers.rld,
         arity = 1,
         new = index,
     ),
 
     'Ꮜ':lambda index, stacks: AttrDict(
+        doc = 'Yield all derangements (array → array)',
         call = helpers.derangements,
         arity = 1,
         new = index,
     ),
 
     'Ꮞ':lambda index, stacks: AttrDict(
+        doc = 'Is the array a derangement of another array? (array → array → bool)',
         call = helpers.is_derangement,
         arity = 2,
         new = index,
     ),
 
     'Ꮠ':lambda index, stacks: AttrDict(
+        doc = 'Unpack the head of the array (array → [any → array])',
         call = tuple_application(helpers.head, helpers.behead),
         arity = 1,
         unpack = True,
@@ -2868,6 +3039,7 @@ commands = {
     ),
 
     'Ꮫ':lambda index, stacks: AttrDict(
+        doc = 'Unpack the head of the array (array → [array → any])',
         call = tuple_application(helpers.behead, helpers.head),
         arity = 1,
         unpack = True,
@@ -2875,6 +3047,7 @@ commands = {
     ),
 
     'Ꮪ':lambda index, stacks: AttrDict(
+        doc = 'Unpack the tail of the array (array → [any → array])',
         call = tuple_application(helpers.tail, helpers.shorten),
         arity = 1,
         unpack = True,
@@ -2882,6 +3055,7 @@ commands = {
     ),
 
     'Ꮩ':lambda index, stacks: AttrDict(
+        doc = 'Unpack the tail of the array (array → [array → any])',
         call = tuple_application(helpers.shorten, helpers.tail),
         arity = 1,
         unpack = True,
@@ -2889,12 +3063,14 @@ commands = {
     ),
 
     'Ꮧ':lambda index, stacks: AttrDict(
+        doc = 'Split on spaces (str → array)',
         call = partial(str.split, sep = ' '),
         arity = 1,
         new = index,
     ),
 
     'Ꮣ':lambda index, stacks: AttrDict(
+        doc = 'Unpack to the stack (array → ...any)',
         call = identity,
         arity = 1,
         unpack = True,
@@ -2902,132 +3078,154 @@ commands = {
     ),
 
     'Ꮥ':lambda index, stacks: AttrDict(
+        doc = 'Partitions of the array (array → [array])',
         call = helpers.partitions,
         arity = 1,
         new = index,
     ),
 
     'Ꮲ':lambda index, stacks: AttrDict(
+        doc = 'Palindromise the array (array → array)',
         call = helpers.bounce,
         arity = 1,
         new = index,
     ),
 
     'Ꮱ':lambda index, stacks: AttrDict(
+        doc = 'Split on newlines (str → array)',
         call = partial(str.split, sep = '\n'),
         arity = 1,
         new = index,
     ),
 
     'Ꮰ':lambda index, stacks: AttrDict(
-        call = ''.join,
+        doc = 'Join an array (array → str)',
+        call = partial(helpers.join, ''),
         arity = 1,
         new = index,
     ),
 
     'Ꮯ':lambda index, stacks: AttrDict(
-        call = ' '.join,
+        doc = 'Join an array on spaces (array → str)',
+        call = partial(helpers.join, ' '),
         arity = 1,
         new = index,
     ),
 
     'Ꮮ':lambda index, stacks: AttrDict(
-        call = '\n'.join,
+        doc = 'Join an array on newlines (array → str)',
+        call = partial(helpers.join, '\n'),
         arity = 1,
         new = index,
     ),
 
     'Ꮭ':lambda index, stacks: AttrDict(
+        doc = 'Split on newlines, thann split each line at spaces (str → [array])',
         call = nest(partial(map, partial(str.split, sep = ' ')), partial(str.split, sep = '\n')),
         arity = 1,
         new = index,
     ),
 
     'Ꭱ':lambda index, stacks: AttrDict(
+        doc = 'Concatenate an array internally (array → str)',
         call = nest(''.join, partial(map, str)),
         arity = 1,
         new = index,
     ),
 
     'Ꭲ':lambda index, stacks: AttrDict(
+        doc = 'Grade up (array → array)',
         call = helpers.grade_up,
         arity = 1,
         new = index,
     ),
 
     'Ꭳ':lambda index, stacks: AttrDict(
+        doc = 'Grade up twice (array → array)',
         call = nest(helpers.grade_up, helpers.grade_up),
         arity = 1,
         new = index,
     ),
 
     'Ꭴ':lambda index, stacks: AttrDict(
+        doc = 'Depth (array → int)',
         call = helpers.depth,
         arity = 1,
         new = index,
     ),
 
     'Ꭵ':lambda index, stacks: AttrDict(
+        doc = 'Enumerate, starting at 1 (array → array)',
         call = partargs(enumerate, {2: 1}),
         arity = 1,
         new = index,
     ),
 
     '₽':lambda index, stacks: AttrDict(
+        doc = 'Powerset (array → array)',
         call = helpers.powerset,
         arity = 1,
         new = index,
     ),
 
     '¥':lambda index, stacks: AttrDict(
+        doc = 'Length range (array → array)',
         call = nest(helpers.range, len),
         arity = 1,
         new = index,
     ),
 
     '£':lambda index, stacks: AttrDict(
-        call = nest('\n'.join, ' '.join),
+        doc = 'Form a matrix display ([array] → str)',
+        call = nest('\n'.join, partial(map, partial(helpers.join, ' '))),
         arity = 1,
         new = index,
     ),
 
     '$':lambda index, stacks: AttrDict(
+        doc = 'Return every nth element (array → int → array)',
         call = reverse(helpers.nth_elements),
         arity = 2,
         new = index,
     ),
 
     '¢':lambda index, stacks: AttrDict(
+        doc = 'Return every other element (array → array)',
         call = partargs(helpers.nth_elements, {2: 2}),
         arity = 1,
         new = index,
     ),
 
     '€':lambda index, stacks: AttrDict(
+        doc = 'Set union (array → array → array)',
         call = helpers.union,
         arity = 2,
         new = index,
     ),
 
     '₩':lambda index, stacks: AttrDict(
+        doc = 'Slice into chunks of the specified length (array → int → array)',
         call = reverse(helpers.chunks_of_n),
         arity = 2,
         new = index,
     ),
 
     '&':lambda index, stacks: AttrDict(
+        doc = 'Set intersection (array → array → array)',
         call = helpers.intersection,
         arity = 2,
         new = index,
     ),
 
     '…':lambda index, stacks: AttrDict(
+        doc = 'Slice into the specified number of chunks (array → int → array)',
         call = reverse(helpers.nchunks),
         arity = 2,
         new = index,
     ),
 
     '§':lambda index, stacks: AttrDict(
+        doc = 'Push the second element on the stack (any → any → [any → any])',
         call = helpers.from_below,
         arity = 2,
         unpack = True,
@@ -3035,98 +3233,436 @@ commands = {
     ),
 
     'Љ':lambda index, stacks: AttrDict(
+        doc = 'Take the first element of an array (array → any)',
         call = helpers.head,
         arity = 1,
         new = index,
     ),
 
-    
+    'Њ':lambda index, stacks: AttrDict(
+        doc = 'Arcsecant (real → real)',
+        call = nest(math.acos, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'Е':lambda index, stacks: AttrDict(
+        doc = 'Arccosecant (real → real)',
+        call = nest(math.asin, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'Р':lambda index, stacks: AttrDict(
+        doc = 'Arccotangent (real → real)',
+        call = nest(math.atan, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'Т':lambda index, stacks: AttrDict(
+        doc = 'Hyperbolic arcsecant (real → real)',
+        call = nest(math.acosh, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'З':lambda index, stacks: AttrDict(
+        doc = 'Hyperbolic arccosecant (real → real)',
+        call = nest(math.asinh, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'У':lambda index, stacks: AttrDict(
+        doc = 'Hyperbolic arccotangent (real → real)',
+        call = nest(math.atanh, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'И':lambda index, stacks: AttrDict(
+        doc = 'Secant (real → real)',
+        call = nest(partial(operator.truediv, 1), math.cos),
+        arity = 1,
+        new = index,
+    ),
+
+    'О':lambda index, stacks: AttrDict(
+        doc = 'Cosecant (real → real)',
+        call = nest(partial(operator.truediv, 1), math.sin),
+        arity = 1,
+        new = index,
+    ),
+
+    'П':lambda index, stacks: AttrDict(
+        doc = 'Cotangent (real → real)',
+        call = nest(partial(operator.truediv, 1), math.tan),
+        arity = 1,
+        new = index,
+    ),
+
+    'Ш':lambda index, stacks: AttrDict(
+        doc = 'Hyperbolic secant (real → real)',
+        call = nest(partial(operator.truediv, 1), math.cosh),
+        arity = 1,
+        new = index,
+    ),
+
+    'А':lambda index, stacks: AttrDict(
+        doc = 'Hyperbolic cosecant (real → real)',
+        call = nest(partial(operator.truediv, 1), math.sinh),
+        arity = 1,
+        new = index,
+    ),
+
+    'С':lambda index, stacks: AttrDict(
+        doc = 'Hyperbolic cotangent (real → real)',
+        call = nest(partial(operator.truediv, 1), math.tanh),
+        arity = 1,
+        new = index,
+    ),
+
+    'Д':lambda index, stacks: AttrDict(
+        doc = 'Complex arccosine (complex → complex)',
+        call = cmath.acos,
+        arity = 1,
+        new = index,
+    ),
+
+    'Ф':lambda index, stacks: AttrDict(
+        doc = 'Complex arcsine (complex → complex)',
+        call = cmath.asin,
+        arity = 1,
+        new = index,
+    ),
+
+    'Г':lambda index, stacks: AttrDict(
+        doc = 'Complex arctangent (complex → complex)',
+        call = cmath.atan,
+        arity = 1,
+        new = index,
+    ),
+
+    'Х':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic arccosine (complex → complex)',
+        call = cmath.acosh,
+        arity = 1,
+        new = index,
+    ),
+
+    'Ј':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic arcsine (complex → complex)',
+        call = cmath.asinh,
+        arity = 1,
+        new = index,
+    ),
+
+    'К':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic arctangent (complex → complex)',
+        call = cmath.atanh,
+        arity = 1,
+        new = index,
+    ),
+
+    'Л':lambda index, stacks: AttrDict(
+        doc = 'Complex cosine (complex → complex)',
+        call = cmath.cos,
+        arity = 1,
+        new = index,
+    ),
+
+    'Ч':lambda index, stacks: AttrDict(
+        doc = 'Complex sine (complex → complex)',
+        call = cmath.sin,
+        arity = 1,
+        new = index,
+    ),
+
+    'Ћ':lambda index, stacks: AttrDict(
+        doc = 'Complex tangent (complex → complex)',
+        call = cmath.tan,
+        arity = 1,
+        new = index,
+    ),
+
+    'Ѕ':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic cosine (complex → complex)',
+        call = cmath.cosh,
+        arity = 1,
+        new = index,
+    ),
+
+    'Џ':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic sine (complex → complex)',
+        call = cmath.sinh,
+        arity = 1,
+        new = index,
+    ),
+
+    'Ц':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic tangent (complex → complex)',
+        call = cmath.tanh,
+        arity = 1,
+        new = index,
+    ),
+
+    'В':lambda index, stacks: AttrDict(
+        doc = 'Complex arcsecant (complex → complex)',
+        call = nest(cmath.acos, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'Б':lambda index, stacks: AttrDict(
+        doc = 'Complex arccosecant (complex → complex)',
+        call = nest(cmath.asin, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'Н':lambda index, stacks: AttrDict(
+        doc = 'Complex arccotangent (complex → complex)',
+        call = nest(cmath.atan, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'М':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic arcsecant (complex → complex)',
+        call = nest(cmath.acosh, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'Ђ':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic arccosecant (complex → complex)',
+        call = nest(cmath.asinh, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'Ж':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic arccotangent (complex → complex)',
+        call = nest(cmath.atanh, partial(operator.truediv, 1)),
+        arity = 1,
+        new = index,
+    ),
+
+    'љ':lambda index, stacks: AttrDict(
+        doc = 'Complex secant (complex → complex)',
+        call = nest(partial(operator.truediv, 1), cmath.cos),
+        arity = 1,
+        new = index,
+    ),
+
+    'њ':lambda index, stacks: AttrDict(
+        doc = 'Complex cosecant (complex → complex)',
+        call = nest(partial(operator.truediv, 1), cmath.sin),
+        arity = 1,
+        new = index,
+    ),
+
+    'е':lambda index, stacks: AttrDict(
+        doc = 'Complex cotangent (complex → complex)',
+        call = nest(partial(operator.truediv, 1), cmath.tan),
+        arity = 1,
+        new = index,
+    ),
+
+    'р':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic secant (complex → complex)',
+        call = nest(partial(operator.truediv, 1), cmath.cosh),
+        arity = 1,
+        new = index,
+    ),
+
+    'т':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic cosecant (complex → complex)',
+        call = nest(partial(operator.truediv, 1), cmath.sinh),
+        arity = 1,
+        new = index,
+    ),
+
+    'з':lambda index, stacks: AttrDict(
+        doc = 'Complex hyperbolic cotangent (complex → complex)',
+        call = nest(partial(operator.truediv, 1), cmath.tanh),
+        arity = 1,
+        new = index,
+    ),
+
+    'у':lambda index, stacks: AttrDict(
+        doc = 'Complex exponential function (complex → complex)',
+        call = cmath.exp,
+        arity = 1,
+        new = index,
+    ),
+
+    'и':lambda index, stacks: AttrDict(
+        doc = 'Complex natural logarithm (complex → complex)',
+        call = cmath.log,
+        arity = 1,
+        new = index,
+    ),
+
+    'о':lambda index, stacks: AttrDict(
+        doc = 'Complex logarithm (complex → num → complex)',
+        call = cmath.log,
+        arity = 2,
+        new = index,
+    ),
+
+    'п':lambda index, stacks: AttrDict(
+        doc = 'Complex logarithm in base 2 (complex → complex)',
+        call = partargs(cmath.log, {2: 2}),
+        arity = 1,
+        new = index,
+    ),
+
+    'ш':lambda index, stacks: AttrDict(
+        doc = 'Complex logarithm in base 10 (complex → complex)',
+        call = partargs(cmath.log, {2: 10}),
+        arity = 1,
+        new = index,
+    ),
+
+    'а':lambda index, stacks: AttrDict(
+        doc = 'Square root, handling negative numbers (num → num)',
+        call = cmath.sqrt,
+        arity = 1,
+        new = index,
+    ),
+
+    'с':lambda index, stacks: AttrDict(
+        doc = 'Generalised fibonacci function (int → int → int → int)',
+        call = helpers.fibonacci,
+        arity = 3,
+        new = index,
+    ),
+
+    'д':lambda index, stacks: AttrDict(
+        doc = 'Function-modified fibonacci (int → func → int)',
+        call = reverse(partargs(helpers.fibonacci, {2: 1, 3: 1})),
+        arity = 2,
+        new = index,
+    ),
+
+    'ф':lambda index, stacks: AttrDict(
+        doc = 'Completely generalised fibonacci (int → int → int → func → int)',
+        call = reverse(helpers.fibonacci),
+        arity = 4,
+        new = index,
+    ),
+
+    'г':lambda index, stacks: AttrDict(
+        doc = 'Final digit (int → int)',
+        call = partargs(operator.mod, {2: 10}),
+        arity = 1,
+        new = index,
+    ),
+
+    # хјклчћѕџцвбнмђж
 
     '¤':lambda index, stacks: AttrDict(
+        doc = 'Internal representation (any → str)',
         call = repr,
         arity = 1,
         new = index,
     ),
 
     'þ':lambda index, stacks: AttrDict(
+        doc = 'Find the index in an infinite list (inf → any → int)',
         call = reverse(helpers.InfiniteList.index),
         arity = 2,
         new = index,
     ),
 
     '@':lambda index, stacks: AttrDict(
+        doc = 'Take the first number of elements from an infinite list (inf → int → array)',
         call = reverse(helpers.InfiniteList.take),
         arity = 2,
         new = index,
     ),
 
     '%':lambda index, stacks: AttrDict(
+        doc = 'Drop an element from the start of an infinite list (inf → inf)',
         call = helpers.InfiniteList.drop,
         arity = 1,
         new = index,
     ),
 
     '‰':lambda index, stacks: AttrDict(
+        doc = 'Drop elements from the start of an infinite list (inf → int → inf)',
         call = reverse(helpers.InfiniteList.drop),
         arity = 2,
         new = index,
     ),
 
     '#':lambda index, stacks: AttrDict(
+        doc = 'Restore any dropped elements (inf → inf)',
         call = helpers.InfiniteList.reset,
         arity = 1,
         new = index,
     ),
 
     '?':lambda index, stacks: AttrDict(
+        doc = 'Infinitely cycle an array (array → inf)',
         call = helpers.cycle,
         arity = 1,
         new = index,
     ),
     
     '¿':lambda index, stacks: AttrDict(
+        doc = 'Infinitely cycle an array, saving it as a sequence (array → str → inf)',
         call = helpers.cycle_ref,
         arity = 2,
         new = index,
     ),
     
     '!':lambda index, stacks: AttrDict(
+        doc = 'Create an infinite list from a function (func → inf)',
         call = helpers.generator,
         arity = 1,
         new = index,
     ),
     
     '¡':lambda index, stacks: AttrDict(
+        doc = 'Create an infinite list from a function, saving it as a sequence (func → str → inf)',
         call = helpers.generator_ref,
         arity = 2,
         new = index,
     ),
 
     '‹':lambda index, stacks: AttrDict(
+        doc = 'Python-style monadic range (int → array)',
         call = range,
         arity = 1,
         new = index,
     ),
 
     '◊':lambda index, stacks: AttrDict(
+        doc = 'Python-style dyadic range (int → int → array)',
         call = range,
         arity = 2,
         new = index,
     ),
 
     '›':lambda index, stacks: AttrDict(
+        doc = 'Python-style triadic range (int → int → int → array)',
         call = range,
         arity = 3,
         new = index,
     ),
 
     '—':lambda index, stacks: AttrDict(
+        doc = 'Yield the next element of an infinite list (inf → any)',
         call = next,
         arity = 1,
         new = index,
     ),
 
     '/':lambda index, stacks: AttrDict(
+        doc = 'Yield the next element of an infinite list (inf → [inf → any])',
         call = peaceful(next),
         arity = 1,
         unpack = True,
@@ -3134,6 +3670,7 @@ commands = {
     ),
     
     '\\':lambda index, stacks: AttrDict(
+        doc = 'Yield the next element of an infinite list (inf → [any → inf])',
         call = nest(reversed, peaceful(next)),
         arity = 1,
         unpack = True,
@@ -3141,18 +3678,21 @@ commands = {
     ),
 
     ':':lambda index, stacks: AttrDict(
+        doc = 'Push the length of the stack, clearing the stack',
         call = tostack(len, False),
         arity = len(stacks[index]),
         new = index,
     ),
 
     ';':lambda index, stacks: AttrDict(
+        doc = 'Wrap the stack in an array, clearing the stack',
         call = tostack(helpers.wrap, False),
         arity = len(stacks[index]),
         new = index,
     ),
 
     '^':lambda index, stacks: AttrDict(
+        doc = 'Push the length of the stack',
         call = tostack(len, True),
         arity = len(stacks[index]),
         unpack = True,
@@ -3160,6 +3700,7 @@ commands = {
     ),
 
     '*':lambda index, stacks: AttrDict(
+        doc = 'Wrap the stack in an array',
         call = tostack(helpers.wrap, True),
         arity = len(stacks[index]),
         unpack = True,
@@ -3167,14 +3708,86 @@ commands = {
     ),
 
     '+':lambda index, stacks: AttrDict(
+        doc = 'Convert to the specified case (str → int → str)',
         call = reverse(helpers.cases),
         arity = 2,
         new = index,
     ),
 
     '_':lambda index, stacks: AttrDict(
+        doc = 'Remove all save the top element of the stack',
         call = helpers.keep,
         arity = len(stacks[index]),
+        new = index,
+    ),
+
+    '|':lambda index, stacks: AttrDict(
+        doc = 'Halve (num → num)',
+        call = partargs(operator.truediv, {2: 2}),
+        arity = 1,
+        new = index,
+    ),
+
+    '~':lambda index, stacks: AttrDict(
+        doc = 'Integer halve (num → int)',
+        call = partargs(operator.floordiv, {2: 2}),
+        arity = 1,
+        new = index,
+    ),
+
+    '<':lambda index, stacks: AttrDict(
+        doc = 'Final digit of power (real → real → int)',
+        call = partargs(pow, {3: 10}),
+        arity = 2,
+        new = index,
+    ),
+
+    '≤':lambda index, stacks: AttrDict(
+        doc = 'Parity of power (real → real → int)',
+        call = partargs(pow, {3: 2}),
+        arity = 2,
+        new = index,
+    ),
+
+    '«':lambda index, stacks: AttrDict(
+        doc = 'Square (num → num)',
+        call = partargs(pow, {2: 2}),
+        arity = 1,
+        new = index,
+    ),
+
+    '·':lambda index, stacks: AttrDict(
+        doc = 'Convert to a grid (array → str)',
+        call = helpers.grid,
+        arity = 1,
+        new = index,
+    ),
+
+    '»':lambda index, stacks: AttrDict(
+        doc = 'Integer square root (real → int)',
+        call = nest(int, math.sqrt),
+        arity = 1,
+        new = index,
+    ),
+
+    '≥':lambda index, stacks: AttrDict(
+        doc = 'Inverse factorial (int → int)',
+        call = inverse(math.factorial),
+        arity = 1,
+        new = index,
+    ),
+
+    '>':lambda index, stacks: AttrDict(
+        doc = 'Inverse fibonacci (int → int)',
+        call = inverse(helpers.fib),
+        arity = 1,
+        new = index,
+    ),
+
+    '¶':lambda index, stacks: AttrDict(
+        doc = 'Fibonacci (int → int)',
+        call = helpers.fib,
+        arity = 1,
         new = index,
     ),
     
@@ -3189,13 +3802,17 @@ if __name__ == '__main__':
     getcode = parser.add_mutually_exclusive_group()
     getcode.add_argument('-f', '--file', help = 'Specifies that code be read from a file', action = a)
     getcode.add_argument('-c', '--cmd', '--cmdline', help = 'Specifies that code be read from the command line', action = a)
-
+    
     parser.add_argument('-u', '--unicode', help = 'Use Unicode encoding', action = a)
     parser.add_argument('-a', '--answer', help = 'Outputs formatted answer', action = a)
     parser.add_argument('-l', '--length', help = 'Outputs the length of the program', action = a)
     parser.add_argument('-s', '--substitute', help = 'Substitute for common symbols', action = a)
     parser.add_argument('-d', '--direct', help = 'Include direct substitutes in substitution', action = a)
     parser.add_argument('-o', '--output', help = 'Output the whole stack', action = a)
+
+    extra = parser.add_mutually_exclusive_group()
+    extra.add_argument('--compress', help = 'Compress the given string', action = a)
+    extra.add_argument('--find', help = 'Find commands by documentation', action = a)
 
     parser.add_argument('program')
     parser.add_argument('argv', nargs = '*', type = eval)
@@ -3216,6 +3833,24 @@ if __name__ == '__main__':
 
     else:
         raise IOError('No code given')
+
+    if settings.compress:
+        tokens = re.findall(r'[A-Z][a-z]+|[a-z]+ | [a-z]+|[A-Z]+|[a-z]+|.|\n', code)
+        print(compressor.compress_fast(tokens))
+        sys.exit(0)
+
+    elif settings.find:
+        for phrase in [code] + settings.argv:
+            for cmd in sorted(commands):
+                doc = commands[cmd](0, [Stack([0])]).doc
+                if doc and phrase.lower() in doc.lower():
+                    print('\'{}\' relates to \'{}\''.format(phrase, cmd))
+                    
+            for cmd in full_help:
+                if phrase.lower() in full_help[cmd].lower():
+                    print('\'{}\' relates to {}'.format(phrase, cmd))
+                
+        sys.exit(0)
 
     if len(settings.argv) < 2:
         stks = 2
@@ -3245,4 +3880,3 @@ if __name__ == '__main__':
         else:
             length = sum((code_page.index(i) // 256) + 1 for i in code)
         print('Length: {} bytes'.format(length), file = sys.stderr)
-        
