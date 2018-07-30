@@ -1,6 +1,7 @@
 import enum
 import itertools
 import math
+import operator
 import random
 
 import dictionary
@@ -48,6 +49,7 @@ def apply_odd(func, array):
 
 def assign(variables, var, val):
     variables[var] = val
+    return val
 
 def behead(array):
     return array[1:]
@@ -103,9 +105,10 @@ def decompress(ints, codepage):
     # Uses the dictionary of words at:
     # https://github.com/DennisMitchell/jellylanguage/blob/master/jelly/dictionary.py
     if isinstance(ints, list):
-        num = from_base(ints, 510)
+        num = from_base(ints, 503)
     else:
         num = ints
+        
     ret = []
     while num:
         num, mod = divmod(num, 4)
@@ -188,6 +191,12 @@ def factors(integer, prime = False, proper = False):
         
     return flist
 
+def fib(x):
+    a = b = 1
+    for _ in builtin_range(x - 2):
+        a, b = a + b, a
+    return a
+
 def find_predicate(pred, array, left = None, retall = False, find = 'elem'):
     results = []
 
@@ -207,7 +216,7 @@ def find_predicate(pred, array, left = None, retall = False, find = 'elem'):
 
     if retall:
         return results
-    return results[0]
+    return results[0] if results else (0 if find == 'elem' else -1)
 
 def flatten(array):
     flat = []
@@ -245,6 +254,11 @@ def gcd(x, y):
             
     return product(union)
 
+def fibonacci(count, a = 1, b = 1, func = operator.add):
+    for _ in builtin_range(count - 2):
+        a, b = func(a, b), a
+    return a
+
 def generator(block):
     return InfiniteList('', block)
 
@@ -255,6 +269,17 @@ def generator_ref(name, block):
 
 def grade_up(array):
     return map(head, sorted(enumerate(array, 1), key = tail))
+
+def grid(array):
+    if depth(array) == 1:
+        return join(' ', array)
+    ret = []
+    for elem in array:
+        elem = list(map(str, elem))
+        length = builtin_max(map(len, elem))
+        elem = list(map(str.ljust, elem, itertools.repeat(length)))
+        ret.append(' '.join(elem))
+    return '\n'.join(ret)
 
 def groupby(func, array):
     groups = {}
@@ -338,6 +363,9 @@ def is_sorted(array):
     sort = sorted(array)
     rev = sort[::-1]
     return sort == array or rev == array
+
+def join(char, array):
+    return char.join(map(str, array))
 
 def keep(*args):
     return args[0]
@@ -550,8 +578,10 @@ def sort(array, key = None, reverse = False):
     return sorted(array, key = key, reverse = reverse)
 
 def sparse(func, indexes, array, left = None, useindex = False):
+    if not isinstance(indexes, list):
+        indexes = [indexes]
+        
     for index in indexes:
-            
         if left is None:
             if useindex:
                 array[index] = func(array[index], index)
@@ -787,10 +817,11 @@ class InfiniteList:
 
     def drop(self, num = 1):
         for _ in builtin_range(num): next(self.gen)
-        return None
+        return self
 
     def reset(self):
         self.gen = self.inf()
+        return self
 		
 class InfGen(enum.Enum):
 
@@ -1053,16 +1084,3 @@ InfSeq = {
     'Å': InfiniteList('Å', InfGen.cycle('zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA'), repeated = 52),
 
 }
-
-if __name__ == '__main__':
-    print(*InfSeq['π'].take(79), sep = '')
-    print(*InfSeq['τ'].take(79), sep = '')
-    print(repr(InfSeq['!']))
-    print(repr(InfSeq['A']))
-
-
-
-
-
-
-
