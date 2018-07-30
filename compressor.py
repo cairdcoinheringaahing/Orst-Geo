@@ -2,6 +2,10 @@ import dictionary
 import helpers
 import orst
 
+codepage = orst.code_page
+for char in '''”“„'’‘`°"''':
+    codepage = codepage.replace(char, '')
+
 import os
 import re
 import sys
@@ -28,7 +32,7 @@ mods = {
 def compress_slow(string, start = 0):
     num = start
     while True:
-        s = helpers.decompress(helpers.to_base(num, 510), orst.code_page)
+        s = helpers.decompress(helpers.to_base(num, 503), orst.code_page)
         if s == string:
             break
         print('{:40} {}'.format(num, s))
@@ -39,7 +43,7 @@ def compress_slow(string, start = 0):
             print('Target:', string)
         
         num += 1
-    return '"{}“'.format(''.join(orst.code_page[i] for i in helpers.to_base(num, 510)))
+    return '"{}“'.format(''.join(codepage[i] for i in helpers.to_base(num, 503)))
 
 def compress_fast(tkns):
     tkns = tkns[::-1]
@@ -74,7 +78,21 @@ def compress_fast(tkns):
         elif len(tkn) == 1 and 31 < ord(tkn) < 127:
             change(95, ord(tkn) - 32, 4, 2)
 
-        else:
+        elif tkn in orst.code_page:
             change(512, orst.code_page.find(tkn), 4, 3)
 
-    return '"{}“'.format(''.join(orst.code_page[i] for i in helpers.to_base(total, 510)))
+        else:
+            for char in tkn[::-1]:
+                if 31 < ord(char) < 127:
+                    change(95, ord(char) - 32, 4, 2)
+                elif char in orst.code_page:
+                    change(512, orst.code_page.find(char), 4, 3)
+                else:
+                    print('Unable to add \'{}\' to the compression'.format(char), file = sys.stderr)
+                    continue
+
+    if ''.join(tkns[::-1]) != helpers.decompress(total, orst.code_page):
+        print('Something went wrong!', file = sys.stderr)
+        sys.exit(1)
+        
+    return '"{}“'.format(''.join(codepage[i] for i in helpers.to_base(total, 503)))
