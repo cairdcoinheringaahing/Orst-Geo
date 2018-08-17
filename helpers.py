@@ -588,7 +588,7 @@ def sparse(func, indexes, array, left = None, useindex = False):
             else:
                 array[index] = func(array[index])
         else:
-            array[index] = func(arg, left)
+            array[index] = func(array[index], left)
             
     return array
 
