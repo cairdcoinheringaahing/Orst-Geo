@@ -605,6 +605,9 @@ def suffix(array):
 def suffix_predicate(func, array):
     return list(map(func, suffix(array)))
 
+def swap(*args):
+    return list(args)[::-1]
+
 def table(func, left, right):
     final = []
     right = list(right)
