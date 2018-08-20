@@ -3790,6 +3790,24 @@ commands = {
         arity = 1,
         new = index,
     ),
+
+    'ˋ':lambda index, stacks: AttrDict(
+        doc = 'Swap the top two elements',
+        call = helpers.swap,
+        arity = 2,
+        unpack = True,
+        new = index,
+    ),
+
+    'ˆ':lambda index, stacks: AttrDict(
+        doc = 'Rotate the top three elements',
+        call = helpers.swap,
+        arity = 3,
+        unpack = True,
+        new = index,
+    ),
+
+    # ¨´ˇ∞≠†∂ƒ¬µﬁﬂ×⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾÷₊₋₌₍₎
     
 }
 
@@ -3880,3 +3898,4 @@ if __name__ == '__main__':
         else:
             length = sum((code_page.index(i) // 256) + 1 for i in code)
         print('Length: {} bytes'.format(length), file = sys.stderr)
+        
