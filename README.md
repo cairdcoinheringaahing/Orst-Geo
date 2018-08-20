@@ -1,3 +1,5 @@
+Orst and Geo are two languages very closely related to one another, and so have been included in this repo together
+
 # Orst
 
 The standard Hello, World! program is simply
@@ -17,5 +19,118 @@ If the code is held in a file, `prog`, use the following invocation to fun the p
 With any additional inputs added to the end of the call. Otherwise, the code can be run be replacing
 `--file` with `--cmd` and directly passing the code, rather than a file.
 
-[GEO](https://tio.run/##7VZXc9vIHX/MDD4F4suFpE3TKr5cojtfek9Ol150OgYnwhIdEkQA0LYuZUioUQ1rq1jNRV2yJMuyevcMFsiLZ5bLj7D7Be4jOLsAq52nPORmbowZDrH/@vvXhdppdKSUxpcx@bqY0nQjGGoSRPZospHWFLFe4MRIWyomR1WpXRaviYFAQPguzMAsNGE37IVdsMfJON3f@77T6wzBvh8IjgXv/BDmYD8cgIPOiHPPmXYmf/Tjn/wUDglwGFoQOGvO5s9@/gvnyDlzs7/80O1y@@BdwR1ohiNwFI7Be@4IHIeT7tBHv/q1O@ZO/kZwp93Z37qL7vLv4BSchjPwvrvprv3@D@7uH4U/wQfuvnv4Z/fIPXNPJDgL5@A8XITLcAEuCU7W6fm0zelzhuFKzAFwS4ar8DFcg@vOqOBMODPO1PX2jjjcgE/gJnzqrDtPb/w1ITjHzrlrJhW3283BZ@5gCm7DHbgL991ReCi4w3BP/ZvmjrtTOnzkzrhzhrvkrqThkQCP4Qk8dZ@66zdvuXu3O@GZewCff@Yeu@eCe4ruol40gkbRGBpHOXQPTaB@NImm0ACaRjMCuo8eoIfoERpCs2gOLaBFtIQstIxW0Cp6jICAnqENtI120C7aQ0/QPjpAm@gQHaGn6A46RicCOkVn6Bw9zw/lM/muvJnvzvfkh9FWvjffl8/l@4W8VVff0Hj1nW@8@81vRcQL4a8IBCwQsEjAEgHLBKwQsErAGAH3CJgk1gqxnhOQIWCYgPsEbBLwhClsELBOwGMC1gjYJWCHgG0CnhGwRcBTYi0Ta5VYj4m1Rqx1Ym0IxHpCrE1iMd4WsZ4Ra5tYO8TaJdYesfaJdUCsQ2IdEeuYWCfEOmUKZwSYxDonIEtAFwHdBPQQMEjAAAE5AnoJ6COgn4ARAu4SABikIQIsAu4QMEPANAFTBEwQMErAOAHzBMwRMEvAIwIeEvCAWHPMwzyxFoi1SKwlap7ZS/bC1@x5am5Q83HL12lm2V5pFXA/HsDjeBbP4wm8gCfxQ/wIr@I7eA6P4UU8KuAlnMPTeAav4EHcgwFexiP4Ln6A72MT3ytMCYVpvFfIFEx8UOjCh/gcPy/k8FYhi3cL3Xin0CMUJvExPin0FWYK44VHhV68jZ/hM3xaGMH79iI8F/7@nbdpZuutfwa/bT//qj0XstfsY5o5opljwd6iEwM0M08zY1c@bnqPZh7QzH2aeRigmSmamfzLJ8LFS9ei//jX5fdp/6K9bh/YJ7R/6QOy22fvCy8GX/Taq/buiz6ae0j7Z2lmlubMf4/QwU17g/bn7L3PN7Kfb5gCnKDZLfvI3rZ3aHaXZvdodp9mD2j2kGaPaPaYZk9o9pRmz2j2XIAH1MxQM0tNk5pd1OymZg81e6nZR80cNfupOUDNQWoOUXOYmhbbJRFNVhNSmxwMfKwEwmy7hF7Gk2pKM8S4IWtGKpXQhSIhpcqaZKS00lnv1AXhLf4XUSWjIxJXdKYRrAuLF66kVOMKX10XQkyipM/OgsA3nSppuhzkW6247pjlJNttccXwqBFdTcQND1Kopa415MlwBt9/jBi5kYorr0vWNxVFE3FF1plsSyDQWtRNKwYjXPVOSoK9etoe3dcWL7Ft67FvdcQTMhd6W7zqwyu7v@T7LxOZECPVV@Pz7LJItbgaDPkGr6c0MaGw6MRXIVeb5wgvl4yVo2i5XN/KfTD9S77vMj9@vRTXNbGuYqmsGpFUVVZiQVbTGmYlGdVXDS9B2Ff0i8SKIbfLmh70aJV7iee1tRxXMp3wtXh4spJO8h6Ra3RKgJgi/6spWRMLryzkJz4hK556SHy/Ov8lK/8tqqJ1PZ1kmuwSTUqq9xIWP2NVuMiPrCCRxI00p3HpcKW9@QTIkhFsqAvxJ8yiq1hu62Ctyk2zBpZjQV02fGyhmjJwyJ5kSPxAbKjFLKoab@tAs5LoFI1bKTHGgMWVNsOzLbUxGLqYlDrFT2UxrcsxnkejQxbbtXiMDeR1npJr3pDpRkzWtNpaegz5NstnfRUkViVGNHiayvnw8LEZjcm3/RSESkEUG8CTZO4YoOCHqdoU6YakcSOlFRDxyl4pNzMRFutDnkneO0YqyoOWNE3qLHaBkTIkPncq@9WV20dOyEkesSfZ0sTboZI@X4U1vyd1UWxobKgTL14U1bKEWhm/YhSeThmEZzbIYBZBxOLtcUOvdHBx1NPJilN2CIvJVIwJxeI32UvQo7xT31DJvG@m1IlMJlQNwef6GLS0EvW@6zwkYRZn@80iltI@C5STwRyVc/H64qn9Emxhwq3VXjnHr6eqpdrEovxH7F3WWfd629L3z8KTbgcbwl7beoBCoarh5uqse@S2NCusz0ilywz2qqYNNgiqv4v5FNe0ERPwQ09KxR1dE7UaLgVedQmU74Bou6zwe6DceJyYNiQjnlL0YHkjeUpFLW@6mNVXmO8VOb5UOcVRnmBNUtrloMo3ftWKYtK8MxQ2OMESltrQysUsd1axz7kq3xxenILANkI0qkhJORrluzkQjfJcRKOBmsLzyeUKLcUNaGivFv0av3L9HIbYlpJixWjk222yalSEVUnXvQM3V225oam1KkmvFiT08mXju42NgtgsvvYIovjlJDb/b@rNX9qEvCG@Ib4hviF@4cTmV4jN/0fvzV@UzeaX7JOcfVBF2BfOfwA)
-[To GEO](https://tio.run/##XVVndxNHFP2Yc@ZXbEiRZIyDDSTBiVNIr6SQahwi0NoIbEmRZTBpZ3ddJLnMuPcm917lJrdzdnbyhXNGo5/w5g/wE8jIMjFEH1az8@69c997u29DDyK3g4ELj316uRYMV0fcnmKkqV9Yj9SEA1ohym4W3Ar69Bshb4WulWgulwu9Sw1qUovW00ZaRxscw6m/8p7T6LTQ6PvIwbTtAxqjcdpEm50Op8cZcPo@/OjjT2gLoq0UU@LMO8uffva5s@scMPOLL1kdi9J2xJqu0g7aSbtoD@ug3bSPtXz19Tesi/V9i9gAG7vGJtn0d7SfDtBBOsSW2fz3P7Dkj@gnOsy22M7PbJcdsD0vHaMJOk4n6TSdoFPIMZ2Gm7ecqNNKZ3wOoas6naVzdJ4uOJ3I6XUGnf7yitt@ukiX6DJdcRaclTt3K5GTcg6ZVRVg9SxG11hzkK7TDZqkW6yT7iDWSjdDv4VZN@uvpqNskCUibIrN1NBdRFN0j@6zFbZw7z7brH1AD9g2PfqdpdghYvu8nTfyDt7Ju3g3j/Ee3svjvI/38yY@wAcRH@LDfISP8hY@xhN8gk/yKY75NJ/hs3yOE8TX@CJf5xs8yTf5Et/i23yZ7/BdvsLbeIrvIb7PD/ghP0q3pI10XdpK16cb0q18Nd2YjqZj6ThK4/OFRRcuXnr1tdcvF2hn8p9DQCaATAKZAjINZAbILJAuID1A@gDPAD4CYgBpBTIEZBnIkiIsAlkAMgdkHkgSyAaQdSBrQFaBrACeBjwLeA7wPOAFwIsI8BLgZcAqtgp4DfA64A3AScCbgLcAbwPeAbwLOAV4D/C@IhwAsQAfAjGB1AGpB9IApBlIE5AYkEYgUSBxIB1A2oEQZakFCAbSBmQQyACQfiC9QDqBdAMZB5IAMgZkFMgIkGHACXXCOOAJwJOAp6R1YE/ZEy/a49JalNZc6cvSmLZnypCIiybRLcbEuOgVE6JPjIhRMSvaREJ0iUnRicSUiIkBMShmRLNoEERMiw7RLobFkLBET6YfZQbEZsbIWGI7Uyd2xKE4ysTEasYUyUy92Mg0oEyfSIm9TDQzmOnOjGYaxbpYEwdiP9MhtuxJeoj@eOclaay@8Jf7bfvoeTvhseftlDR2pZFC9qrsbZLGuDS6Xrle/IY0hqUxJI0RlzT6pdH36y8o72zJjT//PvemjE/aC/a2vSfjU29BMmpvoYfNDxvtWTv5MCpjIzI@Jo0xGbP@6ZDNy/aijMfszUeL5qNFC9Feaa7au/a6vSHNpDQ3pbklzW1p7khzV5opae5Jc1@aB9I8RHRbWoa0TGlZ0qqTVr20GqTVKK2otGLSikurSVrN0mqRVqu0sJolBWE9VOm9pbtd1wOufDVdPI/9VaFgOKL5I3o4EgxWVqOTjSpv5DZC1WoG@QOhGjWqkJpS6q60DJUHw5peqVepiFb93wQr8IZCesDnfnaGFfgDPr3WnYV7PAhFghFvpVIJBe/rYfV//hkxpZKTy8HOluQiedqlwiItLy/HOgbk@ApQiE593b/tr9Rz3Kdk8rWqoE8BfP57auE@2Su6UHTe83/rKv4kTXUtLS4@V1iGUEXY7ztN3H9s1Buo0N0XlbOiyyczPIt6olPq0lxl2aA6IkfKFuGZDG8Ga/XqfHVfdWothzqnFeZrF3PeKv0BPT@LPQWdEJ@4zx5bmoWp4y5qZ7OCZaUKU5b9eFx1IRTSw1U1EW/EHwwcN/NJnwueDrirVct1n1vZU13KRo57kyvotXCNnjMdUrsBvTbifpqb8@Ev144LV6I8qw9b6KQqx6mGde/dHD8rnGtaKOwP5HQ8J2tVuKxn9WAW3An6A@4qb8jtyq3zj9P0eArUoxX2h9wez@PHZ67wBDX5Fhtzq3dHvYv/Ag)
+# Geo
+
+Geo stands for Grid Encoded Orst, and the name describes the language. Essentially, we have a grid of 2320 cells in fashion of a Leyes grid. For those who don't know what that is, imagine normal squared paper, and add 3 horizontal lines inside each square.
+
+Each cell either contains a space or another character. This can be any other character than a space, but must be consistent throughtout the entire program. The indexes of cells containing the non-space character are recorded and used to base a base-2320 number (e.g. `[1, 2, 3] => 1 × 2320⁰ + 2 × 2320¹ + 3 × 2320² => 16151841`) This number is then encoded in base 512, and the corrosponding "digits" are used to index into the Orst code page. Finally, the resulting characters are concatenated and run as Orst.
+
+In addition to this grid format, Geo also has a number at the start of the program. This number indicates which permutation of the indexes should be encoded in base-2320, as they are in ascending order by default, limiting the number of available programs.
+
+## Invocation
+
+Unlike Orst, Geo has no command line customisation and simply is run with the following command, assuming the file is in `prog`:
+
+    $ python3 geo.py prog
+    
+You can also bypass the use of a file by simply inputting the code directly. However, programs tend to span many lines, so this isn't recommended. The standard Hello, World! program is quite long, weighing in at 1922 bytes:
+
+```
+3733
+ O                  
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+      O             
+                    
+                   O
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+            O       
+       O            
+                    
+                    
+                    
+                    
+          O         
+                    
+                    
+                    
+          O         
+                    
+     O
+```
+
+## Orst to Geo
+
+As the process of converting Orst code to Geo is very convoluted and close to impossible to do by hand for very long Orst programs, the file `orst2geo.py` takes a line of input, representing the Orst code to be run, and outputs the corrosponding Geo code
