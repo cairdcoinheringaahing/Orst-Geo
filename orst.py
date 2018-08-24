@@ -10,7 +10,6 @@ import random
 import re
 import sys
 
-import compressor
 import helpers
 
 code_page = '''
@@ -3853,6 +3852,7 @@ if __name__ == '__main__':
         raise IOError('No code given')
 
     if settings.compress:
+        import compressor
         tokens = re.findall(r'[A-Z][a-z]+|[a-z]+ | [a-z]+|[A-Z]+|[a-z]+|.|\n', code)
         print(compressor.compress_fast(tokens))
         sys.exit(0)
