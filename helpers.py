@@ -270,14 +270,19 @@ def generator_ref(name, block):
 def grade_up(array):
     return map(head, sorted(enumerate(array, 1), key = tail))
 
-def grid(array):
+def grid(array, side = 'left'):
     if depth(array) == 1:
         return join(' ', array)
     ret = []
+    length = builtin_max(map(len, map(str, flatten(array))))
+
+    if side == 'left':
+        func = str.ljust
+    else:
+        func = str.rjust
+        
     for elem in array:
-        elem = list(map(str, elem))
-        length = builtin_max(map(len, elem))
-        elem = list(map(str.ljust, elem, itertools.repeat(length)))
+        elem = list(map(func, list(map(str, elem)), itertools.repeat(length)))
         ret.append(' '.join(elem))
     return '\n'.join(ret)
 
@@ -606,7 +611,7 @@ def suffix_predicate(func, array):
     return list(map(func, suffix(array)))
 
 def swap(*args):
-    return list(args)[::-1]
+    return list(args)
 
 def table(func, left, right):
     final = []
@@ -635,6 +640,9 @@ def to_base(integer, base = 10):
         digits.append(rem)
         
     return list(map(lambda a: sign * a, digits[::-1]))
+
+def topandtail(array):
+    return array[1:-1]
 
 def totient(integer):
     count = 0
@@ -740,7 +748,7 @@ def zip(array, left = None, filler = None):
     else:
         zipped = itertools.zip_longest(array, left, fillvalue = filler)
         
-    nones = itertools.cycle([None])
+    nones = itertools.cycle([lambda x: x is not None])
     return map(listify(filter), nones, zipped)
 
 def zipwith(func, left, right):
@@ -782,7 +790,7 @@ class InfiniteList:
         return self.inf()
 
     def __getitem__(self, index):
-        return self.take(index)[-1]
+        return self.take(index + 1)[-1]
 
     def __next__(self):
         return next(self.gen)
