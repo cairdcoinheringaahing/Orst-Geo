@@ -96,7 +96,7 @@ if __name__ == '__main__':
     if settings.file:
         code = open(settings.program).read()
 
-    elif setting.cmd:
+    elif settings.cmd:
         code = settings.program
 
     print(main(code, settings.orst, settings.argv))
