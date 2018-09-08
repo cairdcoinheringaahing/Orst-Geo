@@ -81,9 +81,22 @@ def main(code, out, argv):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog = './geo')
-    parser.add_argument('-c', '--code', help = 'Output the Orst code')
+
+    a = 'store_true'
+    
+    getcode = parser.add_mutually_exclusive_group()
+    getcode.add_argument('-f', '--file', help = 'Specifies that code be read from a file', action = a)
+    getcode.add_argument('-c', '--cmd', '--cmdline', help = 'Specifies that code be read from the command line', action = a)
+
+    parser.add_argument('-o', '--orst', help = 'Output the Orst code', action = a)
     parser.add_argument('program')
     parser.add_argument('argv', nargs = '*', type = eval)
     settings = parser.parse_args()
-    
-    print(main(settings.program, settings.code, settings.argv))
+
+    if settings.file:
+        code = open(settings.program).read()
+
+    elif setting.cmd:
+        code = settings.program
+
+    print(main(code, settings.orst, settings.argv))
