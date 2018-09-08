@@ -1,6 +1,8 @@
 import itertools
 import math
 
+import orst
+
 s = input()
 ret = []
 for elem in s:
