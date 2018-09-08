@@ -149,7 +149,7 @@ class Processor:
         
         self.preserve = code
         self.code = tokeniser(code)
-        self.stacks = [Stack(args)] + [Stack() for _ in range(stacks - 1)]
+        self.stacks = [Stack(starters = args) for _ in range(stacks)]
         self.args = args
         self.index = 0
         self.flag = False
@@ -166,8 +166,11 @@ class Processor:
 
     __repr__ = __str__
 
-    def execute(self):
-        
+    def execute(self, out = False):
+
+        if out:
+            print(self.code, file = sys.stderr)
+            
         acollect = ''
         array = 0
         
@@ -245,9 +248,25 @@ class Processor:
             if char == ']':
                 array -= 1
                 if array == 0:
-                    self.stacks[self.index].push(eval(acollect + ']'))
-                    acollect = ''
-                    continue
+                    try:
+                        self.stacks[self.index].push(eval(acollect + ']'))
+                        acollect = ''
+                        continue
+                    except:
+                        print(self, acollect)
+                
+            if array:
+                acollect += char
+                continue
+            if block:
+                bcollect += char
+                continue
+            if clean:
+                ccollect += char
+                continue
+
+            if char in ' \t\n':
+                continue
 
             if char[0] == '"' or (char[0] in 'ªº' and char[1] == '"'):
                 if char[0] in 'ªº' and char[1] == '"':
@@ -280,25 +299,12 @@ class Processor:
                 self.stacks[self.index].push(effect(char))
                 continue
 
-            if char[0] == '⋮':
+            if char[0] == '⋮' and len(char) == 2:
                 self.stacks[self.index].push(helpers.InfSeq[char[1]])
                 continue
 
             if char == '=':
                 self.flag ^= 1
-                continue
-                
-            if array:
-                acollect += char
-                continue
-            if block:
-                bcollect += char
-                continue
-            if clean:
-                ccollect += char
-                continue
-
-            if char in ' \t\n':
                 continue
 
             try:
@@ -321,9 +327,9 @@ class Processor:
 
             self.index = new
 
-            if ret is None:
+            if ret is None or cmd.is_none:
                 continue
-
+            
             if type(ret) == type(gen):
                 ret = list(ret)
 
@@ -366,7 +372,7 @@ class Processor:
                 
             strings.append(stk)
         
-        return sep.join(strings).strip()
+        return sep.join(strings).rstrip().strip('\n')
 
 class Stack:
     def __init__(self, array = None, starters = None, mod = True):
@@ -460,8 +466,8 @@ def simplify(value, unpack = False):
         value = list(value)
         
     if isinstance(value, list):
-        if all(isinstance(i, str) for i in value):
-            return ''.join(value)
+        #if all(isinstance(i, str) for i in value):
+        #    return ''.join(value)
         
         if len(value) == 1 and unpack:
             return simplify(value[0])
@@ -479,6 +485,9 @@ def simplify(value, unpack = False):
 
     if value in (True, False):
         return int(value)
+
+    if hasattr(value, '__iter__') and not isinstance(value, str):
+        return list(value)
 
     return value
 
@@ -548,7 +557,7 @@ def group(array, concat = True):
         index += skips
         skips = 1
 
-    return list(filter(None, final))
+    return list(filter(lambda a: a != '\n', filter(None, final)))
 
 def tokeniser(string):        
     index = 0
@@ -574,7 +583,7 @@ def tokeniser(string):
                 try:
                     char = string[index]
                 except IndexError:
-                    return final + [temp]
+                    return group(final + [temp])
             
         if temp:
             final.append(temp)
@@ -1812,8 +1821,8 @@ commands = {
 
     'ñ':lambda index, stacks: AttrDict(
         doc = 'Remove the top element',
-        call = stacks[index].remove,
-        arity = 0,
+        call = identity,
+        arity = 1,
         is_none = True,
         new = index,
     ),
@@ -1883,7 +1892,7 @@ commands = {
     ),
 
     'õ':lambda index, stacks: AttrDict(
-        doc = 'Comvert a float to a fraction (float → [int, int])',
+        doc = 'Convert a float to a fraction (float → [int, int])',
         call = float.as_integer_ratio,
         arity = 1,
         unpack = True,
@@ -3560,7 +3569,35 @@ commands = {
         new = index,
     ),
 
-    # хјклчћѕџцвбнмђж
+    'х':lambda index, stacks: AttrDict(
+        doc = 'Yield the uppercase alphabet',
+        call = nilad('ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
+        arity = 0,
+        new = index,
+    ),
+
+    'ј':lambda index, stacks: AttrDict(
+        doc = 'Yield the lowercase alphabet',
+        call = nilad('abcdefghijklmnopqrstuvwxyz'),
+        arity = 0,
+        new = index,
+    ),
+
+    'к':lambda index, stacks: AttrDict(
+        doc = 'Top and tail (array → array)',
+        call = helpers.topandtail,
+        arity = 1,
+        new = index,
+    ),
+
+    'л':lambda index, stacks: AttrDict(
+        doc = 'Behead an array (array → array)',
+        call = helpers.behead,
+        arity = 1,
+        new = index,
+    ),
+
+    # чћѕџцвбнмђж
 
     '¤':lambda index, stacks: AttrDict(
         doc = 'Internal representation (any → str)',
@@ -3756,7 +3793,7 @@ commands = {
     ),
 
     '·':lambda index, stacks: AttrDict(
-        doc = 'Convert to a grid (array → str)',
+        doc = 'Convert to a left-justified grid (array → str)',
         call = helpers.grid,
         arity = 1,
         new = index,
@@ -3806,7 +3843,14 @@ commands = {
         new = index,
     ),
 
-    # ¨´ˇ∞≠†∂ƒ¬µﬁﬂ×⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾÷₊₋₌₍₎
+    '¨':lambda index, stacks: AttrDict(
+        doc = 'Convert to a right-justified grid (array → str)',
+        call = partial(helpers.grid, side = 'right'),
+        arity = 1,
+        new = index,
+    ),
+
+    # ´ˇ∞≠†∂ƒ¬µﬁﬂ×⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾÷₊₋₌₍₎
     
 }
 
@@ -3826,6 +3870,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--substitute', help = 'Substitute for common symbols', action = a)
     parser.add_argument('-d', '--direct', help = 'Include direct substitutes in substitution', action = a)
     parser.add_argument('-o', '--output', help = 'Output the whole stack', action = a)
+    parser.add_argument('-p', '--parsed', help = 'Output the parsed code to STDERR', action = a)
 
     extra = parser.add_mutually_exclusive_group()
     extra.add_argument('--compress', help = 'Compress the given string', action = a)
@@ -3853,8 +3898,9 @@ if __name__ == '__main__':
 
     if settings.compress:
         import compressor
-        tokens = re.findall(r'[A-Z][a-z]+|[a-z]+ | [a-z]+|[A-Z]+|[a-z]+|.|\n', code)
-        print(compressor.compress_fast(tokens))
+        for string in [code] + settings.argv:
+            tokens = re.findall(r'[A-Z][a-z]+|[a-z]+ | [a-z]+|[A-Z]+|[a-z]+|.|\n', string)
+            print(string, ':', compressor.compress_fast(tokens))
         sys.exit(0)
 
     elif settings.find:
@@ -3886,7 +3932,7 @@ if __name__ == '__main__':
                 code = code.replace(old, new)
 
     processor = Processor(code, settings.argv, stks)
-    ret = processor.execute()
+    ret = processor.execute(settings.parsed)
     out = processor.output(sep = '\n\n', flag = settings.output)
 
     if out:
