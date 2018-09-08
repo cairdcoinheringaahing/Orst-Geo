@@ -1,3 +1,4 @@
+import argparse
 import itertools
 import operator
 import sys
@@ -57,10 +58,12 @@ def to_array(num):
         digits.append(mod)
     return digits
 
-def run_orst(array, argv):
+def run_orst(array, out, argv):
     code = ''
     for num in array:
         code += orst.code_page[num]
+    if out:
+        print(code, file = sys.stderr)
 
     proc = orst.Processor(code, argv, max(2, len(argv)))
     ret = proc.execute()
@@ -68,19 +71,19 @@ def run_orst(array, argv):
 
     return out
 
-def main(code, argv):
+def main(code, out, argv):
     p, code = parse(code)
     perm_gen = itertools.permutations(integers(code))
     for _ in range(p + 1):
         ints = next(perm_gen)
 
-    return run_orst(to_array(to_int(ints)), argv)
+    return run_orst(to_array(to_int(ints)), out, argv)
 
 if __name__ == '__main__':
-    code = sys.argv[1]
-    try:
-        code = open(code).read()
-    except:
-        pass
-    argv = sys.argv[2:]
-    print(main(code, argv))
+    parser = argparse.ArgumentParser(prog = './geo')
+    parser.add_argument('-c', '--code', help = 'Output the Orst code')
+    parser.add_argument('program')
+    parser.add_argument('argv', nargs = '*', type = eval)
+    settings = parser.parse_args()
+    
+    print(main(settings.program, settings.code, settings.argv))
