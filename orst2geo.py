@@ -1,9 +1,14 @@
 import itertools
 import math
+import sys
 
 import orst
 
-s = input()
+try:
+    s = sys.argv[1]
+except:
+    s = sys.stdin.read()
+    
 ret = []
 for elem in s:
     ret.append(orst.code_page.index(elem))
