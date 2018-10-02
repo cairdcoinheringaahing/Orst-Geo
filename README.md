@@ -12,7 +12,7 @@ However, we can shorten this by using Orst's builtin string compression with
     
 ## Invocation
 
-If the code is held in a file, `prog`, use the following invocation to fun the program
+If the code is held in a file, `prog`, use the following invocation to run the program
 
     $ python3 orst.py --file --unicode prog
     
