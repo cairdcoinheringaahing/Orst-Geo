@@ -3908,7 +3908,7 @@ if __name__ == '__main__':
             for cmd in sorted(commands):
                 doc = commands[cmd](0, [Stack([0])]).doc
                 if doc and phrase.lower() in doc.lower():
-                    print('\'{}\' relates to \'{}\''.format(phrase, cmd))
+                    print('\'{}\' relates to \'{}\' ({})'.format(phrase, cmd, doc))
                     
             for cmd in full_help:
                 if phrase.lower() in full_help[cmd].lower():
