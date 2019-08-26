@@ -52,7 +52,7 @@ for char in '''”“„'’‘`°"''':
 
 DIGITTRANS = str.maketrans('₁₂₃₄₅₆₇₈₉₀ᴇ', '1234567890e')
 identity = lambda a: a
-variables = {'x': 0}
+variables = {'x': 0, 'y': 1, 'z': -1}
 
 class Output:
     def __init__(self, string = ''):
