@@ -47,8 +47,6 @@ YÝŶŸZŹŽŻaàáâäæãå
 ×⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾
 ÷₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎'''.replace('\n', '')
 
-print(code_page)
-
 codepage = code_page
 for char in '''”“„'’‘`°"''':
     codepage = codepage.replace(char, '')
